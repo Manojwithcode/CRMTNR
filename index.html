@@ -8,9 +8,8 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     
-    <!-- jsPDF & html2canvas for Automatic PDF Quotation Download -->
+    <!-- jsPDF for Professional Vector PDF Quotation Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1645,88 +1644,131 @@
                         </div>
                     </div>
                     <div style="display:flex;gap:8px;margin-top:16px;">
-                        <button class="btn btn-outline" style="flex:1;" onclick="window.App.downloadQuotationAsPDF()"><i class="fas fa-download"></i> Automatic Download PDF</button>
+                        <button class="btn btn-outline" style="flex:1;" onclick="window.App.downloadProfessionalQuotationPDF('${name}', '${mobile}', '${project}', '${plotNo}', ${size}, ${rate}, ${loanPct}, ${advFee}, '${validity}')"><i class="fas fa-download"></i> Professional PDF Download</button>
                         <button class="btn btn-share" style="flex:1;" onclick="window.App.triggerUniversalShare('${name}','${plotNo}','${project}',${size},${rate},${totalCost},'${validity}')"><i class="fas fa-share-alt"></i> Share</button>
                         <button class="btn btn-warning" style="flex:0.5;" onclick="window.App.closeModal()">Cancel</button>
                     </div>
                 `;
             },
 
-            // jsPDF Automatic Download Function
-            downloadQuotationAsPDF() {
+            // Professional Vector Text jsPDF Download Engine
+            downloadProfessionalQuotationPDF(name, mobile, project, plotNo, size, rate, loanPct, advFee, validity) {
                 SoundFX.playSuccess();
                 window.jsPDF = window.jspdf.jsPDF;
-                const element = document.getElementById('printableQuotationCard');
+                const pdf = new jsPDF('p', 'mm', 'a4');
 
-                html2canvas(element, { scale: 2, useCORS: true }).then((canvas) => {
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    const imgWidth = 210; 
-                    const pageHeight = 295; 
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    let heightLeft = imgHeight;
-                    let position = 0;
+                const basicCost = size * rate;
+                const loanAmt = (basicCost * loanPct) / 100;
+                const downPay = basicCost - loanAmt;
+                const stampDuty = basicCost * 0.07;
+                const totalCost = basicCost + stampDuty + advFee;
+                const today = new Date().toLocaleDateString('en-IN');
 
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
+                // Header Background
+                pdf.setFillColor(15, 41, 66);
+                pdf.rect(0, 0, 210, 35, 'F');
 
-                    while (heightLeft >= 0) {
-                        position = heightLeft - imgHeight;
-                        pdf.addPage();
-                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                        heightLeft -= pageHeight;
-                    }
+                // Header Text
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(18);
+                pdf.text("TRUE NOVA REALTY", 14, 15);
+                
+                pdf.setFontSize(8);
+                pdf.setTextColor(212, 175, 55);
+                pdf.text("BUILDING TRUST. CREATING VALUE", 14, 21);
 
-                    pdf.save('TrueNova_Quotation.pdf');
-                    NotificationEngine.show("Quotation PDF Downloaded Successfully!", "success");
+                pdf.setFontSize(12);
+                pdf.setTextColor(255, 255, 255);
+                pdf.text("OFFICIAL PLOT QUOTATION", 145, 15);
+                pdf.setFontSize(9);
+                pdf.text(`Date: ${today}`, 167, 22);
+
+                // Customer & Project Info Box
+                pdf.setFillColor(248, 250, 252);
+                pdf.setDrawColor(226, 232, 240);
+                pdf.roundedRect(14, 42, 182, 32, 3, 3, 'FD');
+
+                pdf.setTextColor(100, 116, 139);
+                pdf.setFontSize(8);
+                pdf.text("CUSTOMER NAME", 18, 49);
+                pdf.text("ADVISOR MOBILE", 110, 49);
+                pdf.text("PROJECT NAME", 18, 63);
+                pdf.text("PLOT NUMBER", 110, 63);
+
+                pdf.setTextColor(15, 41, 66);
+                pdf.setFontSize(10);
+                pdf.setFont("helvetica", "bold");
+                pdf.text(name, 18, 55);
+                pdf.text(mobile, 110, 55);
+                pdf.text(project, 18, 69);
+                pdf.text(plotNo, 110, 69);
+
+                // Financial Table Header
+                let startY = 82;
+                pdf.setFillColor(15, 41, 66);
+                pdf.rect(14, startY, 182, 8, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(9);
+                pdf.text("COST DESCRIPTION & PARTICULARS", 18, startY + 5.5);
+                pdf.text("CALCULATION STANDARD", 115, startY + 5.5);
+                pdf.text("AMOUNT (INR)", 165, startY + 5.5);
+
+                const rows = [
+                    ["1. Basic Plot Cost", `${size.toLocaleString()} x ₹${rate}`, `₹${basicCost.toLocaleString('en-IN', {minimumFractionDigits:2})}`],
+                    [`2. Bank Loan Financing Facility`, `${loanPct}% of Basic Cost`, `₹${loanAmt.toLocaleString('en-IN', {minimumFractionDigits:2})}`],
+                    ["3. Buyer Down Payment Required", `${100 - loanPct}% Self Contribution`, `₹${downPay.toLocaleString('en-IN', {minimumFractionDigits:2})}`],
+                    ["4. Stamp Duty & Registration Fee", "7% Government Statutory", `₹${stampDuty.toLocaleString('en-IN', {minimumFractionDigits:2})}`],
+                    ["5. Advocate & Legal Documentation", "Standard Legal Fee", `₹${advFee.toLocaleString('en-IN', {minimumFractionDigits:2})}`]
+                ];
+
+                let currentY = startY + 8;
+                pdf.setFont("helvetica", "normal");
+                pdf.setTextColor(51, 65, 85);
+
+                rows.forEach((row, index) => {
+                    pdf.setFillColor(index % 2 === 0 ? 255 : 248, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 252);
+                    pdf.rect(14, currentY, 182, 9, 'FD');
+                    pdf.text(row[0], 18, currentY + 6);
+                    pdf.text(row[1], 115, currentY + 6);
+                    pdf.text(row[2], 192, currentY + 6, { align: 'right' });
+                    currentY += 9;
                 });
-            },
 
-            openPrintableWindow() {
-                SoundFX.playSuccess();
-                const cardHtml = document.getElementById('printableQuotationCard').outerHTML;
-                const newWindow = window.open('', '_blank');
-                if (newWindow) {
-                    newWindow.document.write(`
-                        <html>
-                        <head>
-                            <title>True Nova Realty - Official Quotation</title>
-                            <style>
-                                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #0F2942; background: #fff; }
-                                .tn-quotation-preview { background: #FFFFFF; color: #0F2942; border-radius: 16px; padding: 28px; border: 3px solid #0F2942; max-width: 650px; margin: 0 auto; box-shadow: 0 15px 35px rgba(15,41,66,0.15); }
-                                .tn-header { border-bottom: 3px solid #D4AF37; padding-bottom: 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-                                .tn-brand-box { display: flex; align-items: center; gap: 12px; }
-                                .tn-logo-img { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; background: #fff; padding: 2px; border: 1.5px solid #D4AF37; }
-                                .tn-brand { font-size: 1.5rem; font-weight: 900; color: #0F2942; line-height: 1.1; }
-                                .tn-tagline { font-size: 0.72rem; color: #D4AF37; font-weight: 800; letter-spacing: 0.8px; }
-                                .tn-invoice-meta { text-align: right; }
-                                .tn-invoice-title { font-size: 0.95rem; font-weight: 900; color: #0F2942; text-transform: uppercase; }
-                                .tn-invoice-date { font-size: 0.78rem; color: #64748B; font-weight: 700; }
-                                .tn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #F8FAFC; padding: 14px; border-radius: 10px; border: 1.5px solid #E2E8F0; margin-bottom: 20px; }
-                                .tn-row { font-size: 0.85rem; font-weight: 800; color: #0F2942; }
-                                .tn-row span { color: #64748B; font-weight: 600; display: block; font-size: 0.72rem; text-transform: uppercase; }
-                                .tn-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.88rem; }
-                                .tn-table th { background: #0F2942; color: #FFFFFF; text-align: left; padding: 10px 14px; font-weight: 800; }
-                                .tn-table th:last-child, .tn-table td:last-child { text-align: right; }
-                                .tn-table td { border-bottom: 1px solid #E2E8F0; padding: 10px 14px; font-weight: 700; color: #334155; }
-                                .tn-table tr.total-row td { background: #ECFDF5; color: #047857; font-weight: 900; font-size: 1.05rem; border-top: 2px solid #10B981; border-bottom: 2px solid #10B981; }
-                                .tn-validity-note { background: #FFFBEB; border: 1.5px dashed #F59E0B; padding: 10px 14px; border-radius: 8px; font-size: 0.78rem; color: #B45309; font-weight: 800; margin-bottom: 20px; text-align: center; }
-                                .tn-footer-sign { display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748B; font-weight: 700; border-top: 2px solid #CBD5E1; padding-top: 12px; }
-                            </style>
-                        </head>
-                        <body>
-                            ${cardHtml}
-                            <div style="text-align:center; margin-top: 30px;">
-                                <button onclick="window.print()" style="background:#0F2942; color:#fff; padding:12px 28px; border:none; border-radius:8px; font-size:1rem; font-weight:bold; cursor:pointer;">Print / Save as PDF</button>
-                            </div>
-                            <script>window.onload = function() { setTimeout(() => { window.print(); }, 500); }<\/script>
-                        </body>
-                        </html>
-                    `);
-                    newWindow.document.close();
-                } else {
-                    window.print();
-                }
+                // Grand Total Row
+                pdf.setFillColor(236, 253, 245);
+                pdf.setDrawColor(16, 185, 129);
+                pdf.rect(14, currentY + 2, 182, 11, 'FD');
+                pdf.setFont("helvetica", "bold");
+                pdf.setTextColor(4, 120, 87);
+                pdf.setFontSize(10);
+                pdf.text("NET GRAND TOTAL COST (Basic + Stamp Duty + Advocate):", 18, currentY + 9);
+                pdf.text(`₹${totalCost.toLocaleString('en-IN', {minimumFractionDigits:2})}`, 192, currentY + 9, { align: 'right' });
+
+                // Terms & Validity Note
+                currentY += 20;
+                pdf.setFont("helvetica", "normal");
+                pdf.setFontSize(8);
+                pdf.setTextColor(100, 116, 139);
+                pdf.text(`* Note: This quotation is valid for ${validity} from the date of issuance. Govt charges subject to statutory updates.`, 14, currentY);
+                pdf.text("This is a formal computer-generated quotation, not a sale agreement.", 14, currentY + 5);
+
+                // Signatures
+                currentY += 20;
+                pdf.setDrawColor(203, 213, 225);
+                pdf.line(14, currentY, 70, currentY);
+                pdf.line(140, currentY, 196, currentY);
+
+                pdf.setFont("helvetica", "bold");
+                pdf.setTextColor(15, 41, 66);
+                pdf.text("Customer Signature", 14, currentY + 5);
+                pdf.text("AUTHORIZED SIGNATURE", 140, currentY + 5);
+                pdf.setFont("helvetica", "normal");
+                pdf.setTextColor(100, 116, 139);
+                pdf.text("TRUE NOVA REALTY", 140, currentY + 10);
+
+                pdf.save('TrueNova_Official_Quotation.pdf');
+                NotificationEngine.show("Professional PDF Downloaded Successfully!", "success");
             },
 
             triggerUniversalShare(name, plotNo, project, size, rate, totalCost, validity) {
