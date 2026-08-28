@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>True Nova Realty — CRM Pro</title>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    
+    <!-- jsPDF & html2canvas for Automatic PDF Quotation Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --primary: #0F2942;
+            --primary-light: #1E4066;
+            --primary-dark: #0A1C30;
+            --accent: #D4AF37;
+            --accent-light: #F4E086;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --info: #3B82F6;
+            --bg-body: #F4F6F9;
+            --bg-card: #FFFFFF;
+            --text-main: #1E293B;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
+            --shadow-md: 0 6px 16px rgba(15, 23, 42, 0.08);
+            --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --nav-height: 66px;
+            --header-height: 60px;
+            --fab-size: 58px;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        body.dark-mode {
+            --bg-body: #0B132B;
+            --bg-card: #1C2541;
+            --text-main: #F1F5F9;
+            --text-muted: #94A3B8;
+            --border-color: #334155;
+            --primary: #1C2541;
+            --primary-light: #3A506B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html { font-size: 16px; scroll-behavior: smooth; }
+        body {
+            font-family: var(--font); background: var(--bg-body); color: var(--text-main);
+            padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+            padding-top: var(--header-height); min-height: 100vh; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased; user-select: none; transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* SPLASH */
+        #splashScreen {
+            position: fixed; inset: 0; background: linear-gradient(135deg, var(--primary-dark), var(--primary-light)); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 20px; transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        #splashScreen.hide { opacity: 0; visibility: hidden; }
+        .splash-logo-img {
+            width: 80px; height: 80px; object-fit: contain; border-radius: 14px;
+            background: #ffffff; padding: 6px; margin-bottom: 16px;
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+            animation: floatIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .splash-title { font-size: 1.8rem; font-weight: 800; color: #FFFFFF; letter-spacing: 1px; }
+        .splash-tagline { font-size: 0.85rem; color: var(--accent-light); font-weight: 500; margin-top: 6px; }
+        .splash-loader { margin-top: 40px; width: 36px; height: 36px; border: 3px solid rgba(255, 255, 255, 0.15); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes floatIn { from { transform: translateY(20px) scale(0.8); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* AUTH */
+        #authOverlay {
+            position: fixed; inset: 0; background: var(--bg-body); z-index: 5000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+        }
+        .auth-card {
+            background: var(--bg-card); padding: 26px; border-radius: var(--radius-lg); width: 100%; max-width: 400px;
+            box-shadow: var(--shadow-lg); border: 1px solid var(--border-color);
+        }
+        .auth-card h2 { font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+        .auth-card p { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; }
+
+        /* HEADER */
+        .app-header {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: var(--header-height);
+            background: linear-gradient(90deg, #0A1C30, #0F2942); color: #fff;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 18px; box-shadow: var(--shadow-md);
+        }
+        .app-header .brand { display: flex; align-items: center; gap: 10px; }
+        .header-logo-img {
+            width: 34px; height: 34px; object-fit: contain; border-radius: 8px;
+            background: #ffffff; padding: 3px; flex-shrink: 0; border: 1px solid rgba(212, 175, 55, 0.5);
+        }
+        .app-header .brand .name { font-weight: 700; font-size: 1.05rem; }
+        .app-header .brand .tagline { font-size: 0.6rem; color: #94A3B8; display: block; margin-top: -2px; }
+        .header-controls { display: flex; align-items: center; gap: 10px; }
+        .header-btn {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--accent-light); width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .role-badge {
+            font-size: 0.65rem; background: rgba(212, 175, 55, 0.2); color: var(--accent-light);
+            border: 1px solid rgba(212, 175, 55, 0.4); padding: 2px 10px; border-radius: 20px; font-weight: 700;
+        }
+        .role-badge.admin { background: #10B981; color: #fff; border-color: #059669; }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; height: calc(var(--nav-height) + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom); background: var(--bg-card); backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border-color); display: flex; align-items: stretch; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+        }
+        .bottom-nav .nav-item {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 3px; font-size: 0.65rem; color: var(--text-muted); transition: all 0.2s ease; padding: 4px 0; cursor: pointer;
+        }
+        .bottom-nav .nav-item i { font-size: 1.2rem; }
+        .bottom-nav .nav-item.active { color: var(--accent); font-weight: 700; }
+
+        /* PAGES */
+        .page { display: none; padding: 18px 16px; max-width: 720px; margin: 0 auto; animation: fadeIn 0.25s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .page-title {
+            font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 18px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .card {
+            background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+            padding: 18px; margin-bottom: 16px; border: 1px solid var(--border-color);
+        }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .card-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+
+        /* STATS */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+        .stats-grid.row-2 { grid-template-columns: repeat(2, 1fr); margin-bottom: 18px; }
+        .stat-card {
+            background: var(--bg-card); border-radius: var(--radius-md); padding: 14px 8px;
+            text-align: center; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm);
+            cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .stat-card:active { transform: scale(0.96); }
+        .stat-card .stat-number { font-size: 1.6rem; font-weight: 800; color: var(--text-main); line-height: 1.1; }
+        .stat-card .stat-label {
+            font-size: 0.62rem; text-transform: uppercase; color: var(--text-muted);
+            margin-top: 5px; font-weight: 700; letter-spacing: 0.3px;
+        }
+        .stat-card.c-blue { border-color: #CBD5E1; }
+        .stat-card.c-gold { border-color: #FDE68A; } .stat-card.c-gold .stat-number { color: #D97706; }
+        .stat-card.c-green { border-color: #A7F3D0; } .stat-card.c-green .stat-number { color: #059669; }
+        .stat-card.c-sky { border-color: #BFDBFE; } .stat-card.c-sky .stat-number { color: #2563EB; }
+        .stat-card.c-dark { border-color: #CBD5E1; }
+        .stat-card.c-purple { border-color: #E9D5FF; } .stat-card.c-purple .stat-number { color: #9333EA; }
+        .stat-card.c-red { border-color: #FECACA; } .stat-card.c-red .stat-number { color: #DC2626; }
+
+        .alert-banner {
+            background: #FEF2F2; border: 1.5px solid #FECACA; border-left: 5px solid var(--danger);
+            border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 18px;
+            display: flex; align-items: center; gap: 12px; font-weight: 700; color: var(--danger); font-size: 0.92rem;
+            cursor: pointer;
+        }
+
+        /* FILTERS */
+        .lead-filter-bar { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+        .filter-row-top { display: flex; gap: 10px; }
+        .search-input-wrap { flex: 1; position: relative; }
+        .search-input-wrap input {
+            padding-left: 38px; height: 46px; border-radius: var(--radius-md); width: 100%;
+            border: 1.5px solid var(--border-color); background: var(--bg-card); color: var(--text-main);
+            outline: none; font-size: 0.95rem; padding: 12px 14px 12px 38px;
+        }
+        .search-input-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .filter-dropdown { flex: 1; height: 46px; border-radius: var(--radius-md); }
+        .filter-dropdown select {
+            height: 100%; border-radius: var(--radius-md); font-weight: 600; width: 100%;
+            padding: 12px 14px; border: 1.5px solid var(--border-color); background: var(--bg-card);
+            color: var(--text-main); outline: none; font-size: 0.95rem;
+        }
+
+        /* TABS */
+        .fu-tabs-bar { display: flex; background: #E2E8F0; border-radius: var(--radius-md); padding: 4px; margin-bottom: 18px; }
+        .fu-tab {
+            flex: 1; text-align: center; padding: 10px 4px; font-weight: 800; font-size: 0.82rem;
+            color: var(--text-muted); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s ease;
+        }
+        .fu-tab.active { background: #FFFFFF; color: var(--primary); box-shadow: var(--shadow-sm); }
+        body.dark-mode .fu-tab.active { background: #1C2541; color: var(--accent); }
+
+        /* OPTIONS */
+        .options-menu-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+        .option-item-card {
+            background: var(--bg-card); border-radius: var(--radius-lg); padding: 18px 16px;
+            display: flex; align-items: center; gap: 16px; border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .option-item-card:active { transform: scale(0.98); }
+        .option-icon-circle {
+            width: 48px; height: 42px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 1.2rem; flex-shrink: 0;
+        }
+        .option-icon-circle.ic-yellow { background: #FEF3C7; color: #D97706; }
+        .option-icon-circle.ic-green { background: #ECFDF5; color: #059669; }
+        .option-icon-circle.ic-orange { background: #FFF7ED; color: #EA580C; }
+        .option-icon-circle.ic-gold { background: #FEF9C3; color: #CA8A04; }
+        .option-icon-circle.ic-blue { background: #EFF6FF; color: #2563EB; }
+        .option-icon-circle.ic-purple { background: #F3E8FF; color: #9333EA; }
+        .option-text-wrap h4 { font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+        .option-text-wrap p { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
+        /* LEAD CARDS */
+        .lead-card {
+            background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 14px;
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); border-left: 4px solid var(--accent);
+            cursor: pointer; transition: transform 0.1s ease;
+        }
+        .lead-card:active { transform: scale(0.99); }
+        .lead-card.booking-card { border-left-color: var(--success); }
+        .lead-card .lead-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .lead-card .lead-name {
+            font-weight: 800; font-size: 1.15rem; color: var(--text-main);
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .call-count-badge {
+            font-size: 0.7rem; background: rgba(59, 130, 246, 0.15); color: #2563EB;
+            padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid #BFDBFE;
+        }
+        .plot-number-badge {
+            font-size: 0.75rem; background: #ECFDF5; color: #059669; padding: 3px 10px;
+            border-radius: 12px; font-weight: 800; border: 1px solid #A7F3D0;
+        }
+        .lead-card .lead-info-row {
+            display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; font-size: 0.82rem; color: var(--text-muted); font-weight: 600;
+        }
+        .lead-card .lead-info-row i { color: var(--text-muted); margin-right: 4px; }
+        .lead-last-remark {
+            font-size: 0.8rem; background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--warning);
+            padding: 6px 10px; border-radius: 6px; color: var(--text-main); margin-top: 8px; font-weight: 600;
+        }
+
+        .lead-actions-5 { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+        .btn-act {
+            width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; border: none; font-size: 1.05rem; cursor: pointer; transition: transform 0.15s ease; box-shadow: var(--shadow-sm);
+        }
+        .btn-act:active { transform: scale(0.9); }
+        .btn-act.act-call { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+        .btn-act.act-wa { background: #25D366 !important; color: #FFFFFF !important; box-shadow: 0 4px 10px rgba(37,211,102,0.3); }
+        .btn-act.act-wa svg { width: 22px; height: 20px; fill: #FFFFFF; }
+        .btn-act.act-edit { background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
+        .btn-act.act-pdf { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+        .btn-act.act-history { background: #F3E8FF; color: #9333EA; border: 1px solid #E9D5FF; }
+        .btn-act.act-del { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+        .btn-act.act-done { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+        .status-badge {
+            font-size: 0.65rem; padding: 4px 12px; border-radius: 20px; font-weight: 800;
+            text-transform: uppercase; background: #E2E8F0; color: #475569;
+        }
+
+        /* PRIORITY BADGES */
+        .priority-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 800; }
+        .priority-high { background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+        .priority-medium { background: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }
+        .priority-low { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+
+        /* ULTRA-PREMIUM QUOTATION STYLING */
+        .tn-quotation-preview {
+            background: #FFFFFF; color: #0F2942; border-radius: 16px; padding: 28px;
+            font-family: 'Segoe UI', system-ui, sans-serif; border: 3px solid #0F2942; box-shadow: 0 15px 35px rgba(15, 41, 66, 0.15);
+        }
+        .tn-header {
+            border-bottom: 3px solid #D4AF37; padding-bottom: 14px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        .tn-brand-box { display: flex; align-items: center; gap: 12px; }
+        .tn-logo-img { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; background: #fff; padding: 2px; border: 1.5px solid #D4AF37; }
+        .tn-brand { font-size: 1.5rem; font-weight: 900; color: #0F2942; letter-spacing: 0.5px; line-height: 1.1; }
+        .tn-tagline { font-size: 0.72rem; color: #D4AF37; font-weight: 800; letter-spacing: 0.8px; margin-top: 2px; }
+        .tn-invoice-meta { text-align: right; }
+        .tn-invoice-title { font-size: 0.95rem; font-weight: 900; color: #0F2942; letter-spacing: 0.5px; text-transform: uppercase; }
+        .tn-invoice-date { font-size: 0.78rem; color: #64748B; font-weight: 700; margin-top: 2px; }
+
+        .tn-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #F8FAFC;
+            padding: 14px; border-radius: 10px; border: 1.5px solid #E2E8F0; margin-bottom: 20px;
+        }
+        .tn-row { font-size: 0.85rem; font-weight: 800; color: #0F2942; }
+        .tn-row span { color: #64748B; font-weight: 600; display: block; font-size: 0.72rem; margin-bottom: 1px; text-transform: uppercase; }
+
+        .tn-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.88rem; }
+        .tn-table th { background: #0F2942; color: #FFFFFF; text-align: left; padding: 10px 14px; font-weight: 800; }
+        .tn-table th:last-child, .tn-table td:last-child { text-align: right; }
+        .tn-table td { border-bottom: 1px solid #E2E8F0; padding: 10px 14px; font-weight: 700; color: #334155; }
+        .tn-table tr.total-row td { background: #ECFDF5; color: #047857; font-weight: 900; font-size: 1.05rem; border-top: 2px solid #10B981; border-bottom: 2px solid #10B981; }
+
+        .tn-validity-note {
+            background: #FFFBEB; border: 1.5px dashed #F59E0B; padding: 10px 14px; border-radius: 8px;
+            font-size: 0.78rem; color: #B45309; font-weight: 800; margin-bottom: 20px; text-align: center;
+        }
+        .tn-footer-sign {
+            display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748B;
+            font-weight: 700; border-top: 2px solid #CBD5E1; padding-top: 12px; margin-top: 10px;
+        }
+
+        .schedule-box-dashed {
+            background: #FFFBEB; border: 1.5px dashed #F59E0B; padding: 14px; border-radius: var(--radius-md); margin-bottom: 16px;
+        }
+
+        .fab {
+            position: fixed; bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px); right: 20px; z-index: 90;
+            width: var(--fab-size); height: var(--fab-size); border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #B38F22); color: #fff; font-size: 1.5rem;
+            border: none; cursor: pointer; box-shadow: var(--shadow-lg);
+        }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 700; font-size: 0.85rem; color: var(--text-main); margin-bottom: 6px; }
+        input, select, textarea {
+            font-family: inherit; font-size: 0.95rem; width: 100%; padding: 12px 14px;
+            border: 1.5px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); color: var(--text-main); outline: none;
+        }
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 22px;
+            border-radius: var(--radius-md); font-weight: 700; font-size: 0.95rem; width: 100%; border: none; color: #fff; cursor: pointer;
+        }
+        .btn-primary { background: linear-gradient(135deg, #0F2942, #1E4066); }
+        .btn-outline { background: transparent; color: var(--text-main); border: 2px solid var(--border-color); }
+        .btn-success { background: #10B981; color: #fff; }
+        .btn-share { background: #3B82F6; color: #fff; }
+        .btn-sm { padding: 8px 16px; font-size: 0.8rem; width: auto; }
+        .btn-warning { background: #F59E0B; color: #fff; }
+
+        .toast-container {
+            position: fixed; top: calc(var(--header-height) + 12px); left: 16px; right: 16px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+        }
+        .toast {
+            padding: 14px 18px; border-radius: var(--radius-md); background: #0F172A; color: #fff;
+            font-size: 0.88rem; font-weight: 600; pointer-events: auto; display: flex; align-items: center; gap: 10px;
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--info); }
+
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 200; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+            display: none; align-items: flex-end; justify-content: center; padding: 20px 16px 30px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-sheet {
+            background: var(--bg-card); color: var(--text-main); border-radius: var(--radius-lg);
+            max-width: 600px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 22px;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printableQuotationCard, #printableQuotationCard * { visibility: visible; }
+            #printableQuotationCard { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; background: #fff; }
+            .modal-overlay, .app-header, .bottom-nav, .fab, .toast-container, button { display: none !important; }
+        }
+
+        @media (max-width: 480px) {
+            .tn-grid { grid-template-columns: 1fr; }
+            .filter-row-top { flex-direction: column; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-grid.row-2 { grid-template-columns: 1fr 1fr; }
+            .lead-actions-5 { gap: 6px; }
+            .btn-act { width: 38px; height: 38px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SPLASH -->
+    <div id="splashScreen">
+        <img src="1000573949-removebg-preview.png" alt="True Nova Logo" class="splash-logo-img" />
+        <div class="splash-title">TRUE NOVA REALTY</div>
+        <div class="splash-tagline">Cloud Multi-User CRM System</div>
+        <div class="splash-loader"></div>
+    </div>
+
+    <!-- AUTH -->
+    <div id="authOverlay">
+        <div class="auth-card">
+            <h2>True Nova Login</h2>
+            <p>Login with your User ID and Password.</p>
+            <form onsubmit="window.App.handleLogin(event)">
+                <div class="form-group">
+                    <label>User Email ID</label>
+                    <input type="email" id="loginEmail" required placeholder="email@truenova.com" />
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" />
+                </div>
+                <button type="submit" class="btn btn-primary">Login to Cloud CRM</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="brand">
+            <img src="1000573949-removebg-preview.png" alt="Logo" class="header-logo-img" />
+            <div>
+                <span class="name">TRUE NOVA REALTY</span>
+                <span class="tagline">Building Trust • Creating Value</span>
+            </div>
+        </div>
+        <div class="header-controls">
+            <span class="role-badge" id="userRoleTag">Executive</span>
+            <button class="header-btn" onclick="window.App.toggleTheme()"><i class="fas fa-moon" id="themeIcon"></i></button>
+            <button class="header-btn" onclick="window.App.openProfileModal()" title="Profile & Logout"><i class="fas fa-user-circle"></i></button>
+        </div>
+    </header>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- DASHBOARD -->
+    <section class="page active" id="page-dashboard">
+        <div class="page-title"><i class="fas fa-chart-pie"></i> Dashboard</div>
+        <div class="stats-grid">
+            <div class="stat-card c-blue" onclick="window.App.navigateTo('leads')"><div class="stat-number" id="statTotalLeads">0</div><div class="stat-label">TOTAL LEADS</div></div>
+            <div class="stat-card c-gold" onclick="window.App.filterLeadsByStatus('New')"><div class="stat-number" id="statNewLeads">0</div><div class="stat-label">NEW LEADS</div></div>
+            <div class="stat-card c-green" onclick="window.App.navigateTo('tasks')"><div class="stat-number" id="statTodayTasks">0</div><div class="stat-label">TODAY'S TASKS</div></div>
+        </div>
+        <div class="stats-grid row-2">
+            <div class="stat-card c-sky" onclick="window.App.filterLeadsByStatus('Site Visit')"><div class="stat-number" id="statSiteVisits">0</div><div class="stat-label">SITE VISITS</div></div>
+            <div class="stat-card c-dark" onclick="window.App.navigateTo('bookings')"><div class="stat-number" id="statBookings">0</div><div class="stat-label">BOOKINGS</div></div>
+        </div>
+        <div class="stats-grid row-2" style="margin-top:-4px;">
+            <div class="stat-card c-purple" onclick="window.App.filterLeadsByStatus('Follow-up')"><div class="stat-number" id="statFollowupLeads">0</div><div class="stat-label">FOLLOW-UP LEADS</div></div>
+            <div class="stat-card c-red" onclick="window.App.filterLeadsByStatus('Not Interested')"><div class="stat-number" id="statNotInterestedLeads">0</div><div class="stat-label">NOT INTERESTED</div></div>
+        </div>
+
+        <div id="overdueAlertBanner" class="alert-banner" style="display:none;" onclick="window.App.navigateTo('tasks')">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>You have <span id="overdueCount">0</span> overdue follow-ups! (Click to view)</span>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-clock" style="color:var(--accent);"></i> Recent Leads</h3>
+                <span id="recentLeadCount" style="font-weight:700;">0</span>
+            </div>
+            <div id="recentLeadsContainer"></div>
+            <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="window.App.navigateTo('leads')">View All <i class="fas fa-arrow-right"></i></button>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-bell" style="color:var(--accent);"></i> Today's Follow-ups</h3>
+                <span id="todayFollowupCount" style="font-weight:700;">0</span>
+            </div>
+            <div id="todayFollowupsContainer"></div>
+        </div>
+    </section>
+
+    <!-- LEADS -->
+    <section class="page" id="page-leads">
+        <div class="page-title">
+            <span><i class="fas fa-address-book"></i> Leads</span>
+            <div id="adminBulkAssignHeaderBtn" style="display:none;">
+                <button class="btn btn-warning btn-sm" onclick="window.App.openBulkAssignModal()"><i class="fas fa-tasks"></i> Bulk Assign</button>
+            </div>
+        </div>
+        <div class="lead-filter-bar">
+            <div class="filter-row-top">
+                <div class="search-input-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="leadSearchInput" placeholder="Search leads..." oninput="window.App.renderLeads()" />
+                </div>
+                <div class="filter-dropdown">
+                    <select id="statusFilterSelect" onchange="window.App.renderLeads()">
+                        <option value="all">All Status</option>
+                        <option value="New">New</option>
+                        <option value="Follow-up">Follow-up</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Site Visit">Site Visit</option>
+                        <option value="Booked">Booked</option>
+                        <option value="Not Interested">Not Interested</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-dropdown" style="width:100%;">
+                <select id="projectFilterSelect" onchange="window.App.renderLeads()">
+                    <!-- DYNAMIC -->
+                </select>
+            </div>
+        </div>
+        <div id="leadsListContainer"></div>
+    </section>
+
+    <!-- FOLLOW-UPS / TASKS -->
+    <section class="page" id="page-tasks">
+        <div class="page-title"><i class="fas fa-calendar-alt"></i> Follow-ups & Advanced Tasks</div>
+        <div class="fu-tabs-bar">
+            <div class="fu-tab active" id="fuTabToday" onclick="window.App.switchFuTab('today')">Today <span id="fuCountToday">0</span></div>
+            <div class="fu-tab" id="fuTabOverdue" onclick="window.App.switchFuTab('overdue')">Overdue <span id="fuCountOverdue">0</span></div>
+            <div class="fu-tab" id="fuTabUpcoming" onclick="window.App.switchFuTab('upcoming')">Upcoming <span id="fuCountUpcoming">0</span></div>
+        </div>
+        <div id="tasksListContainer"></div>
+    </section>
+
+    <!-- BOOKINGS -->
+    <section class="page" id="page-bookings">
+        <div class="page-title">
+            <span><i class="fas fa-handshake"></i> Bookings</span>
+            <button class="btn btn-primary btn-sm" onclick="window.App.openBookingFormModal()"><i class="fas fa-plus"></i> New Booking</button>
+        </div>
+        <div id="bookingsListContainer"></div>
+    </section>
+
+    <!-- MORE -->
+    <section class="page" id="page-more">
+        <div class="page-title">
+            <span style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-ellipsis-h" style="color:var(--accent);"></i> Options
+            </span>
+        </div>
+        <div class="options-menu-list">
+            <div class="option-item-card" onclick="window.App.openQuotationModal()">
+                <div class="option-icon-circle ic-purple"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="option-text-wrap">
+                    <h4>Create Plot Quotation</h4>
+                    <p>Calculate Cost, View Live Preview & Print / Save PDF</p>
+                </div>
+            </div>
+            <div class="option-item-card" onclick="window.App.syncEmailData()">
+                <div class="option-icon-circle ic-yellow"><i class="fas fa-cloud"></i></div>
+                <div class="option-text-wrap">
+                    <h4>Email Account Data Sync</h4>
+                    <p>Save data to your Email Account</p>
+                </div>
+            </div>
+            <div class="option-item-card" onclick="window.App.exportBackupCode()">
+                <div class="option-icon-circle ic-green"><i class="fas fa-download"></i></div>
+                <div class="option-text-wrap">
+                    <h4>Export Backup Code</h4>
+                    <p>Get JSON Backup text code</p>
+                </div>
+            </div>
+            <div class="option-item-card" onclick="window.App.importBackupCodeModal()">
+                <div class="option-icon-circle ic-orange"><i class="fas fa-upload"></i></div>
+                <div class="option-text-wrap">
+                    <h4>Import Backup Code</h4>
+                    <p>Paste code to restore CRM data</p>
+                </div>
+            </div>
+            <div class="option-item-card" onclick="window.App.openManageProjectsModal()">
+                <div class="option-icon-circle ic-gold"><i class="fas fa-city"></i></div>
+                <div class="option-text-wrap">
+                    <h4>Manage Projects</h4>
+                    <p>Add, edit or delete projects</p>
+                </div>
+            </div>
+            <div class="option-item-card" onclick="window.App.showAbout()">
+                <div class="option-icon-circle ic-blue"><i class="fas fa-info-circle"></i></div>
+                <div class="option-text-wrap">
+                    <h4>About App</h4>
+                    <p>True Nova Realty Mini CRM</p>
+                </div>
+            </div>
+            <div id="adminControlsArea" style="display:none;">
+                <div class="option-item-card" style="border-left:4px solid var(--success);" onclick="window.App.openCreateUserModal()">
+                    <div class="option-icon-circle ic-purple"><i class="fas fa-user-shield"></i></div>
+                    <div class="option-text-wrap">
+                        <h4>Create Executive Login</h4>
+                        <p>Generate User ID & Password for Staff</p>
+                    </div>
+                </div>
+                <div class="option-item-card" style="border-left:4px solid var(--info);" onclick="window.App.openManageExecsModal()">
+                    <div class="option-icon-circle ic-blue"><i class="fas fa-users-cog"></i></div>
+                    <div class="option-text-wrap">
+                        <h4>Manage Executives List</h4>
+                        <p>View, Edit Passwords & Total Executives</p>
+                    </div>
+                </div>
+                <div class="option-item-card" style="border-left:4px solid var(--accent);" onclick="window.App.openManageExecProfilesModal()">
+                    <div class="option-icon-circle ic-gold"><i class="fas fa-id-badge"></i></div>
+                    <div class="option-text-wrap">
+                        <h4>Manage Executives Profile</h4>
+                        <p>Edit Name, Mobile, Email, Gender & Photo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <button class="fab" id="fabMain" title="Add Lead" onclick="window.App.openAddLead()"><i class="fas fa-plus"></i></button>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="window.App.navigateTo('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
+        <div class="nav-item" onclick="window.App.navigateTo('leads')"><i class="fas fa-address-book"></i><span>Leads</span></div>
+        <div class="nav-item" onclick="window.App.navigateTo('tasks')"><i class="fas fa-calendar-alt"></i><span>Tasks</span></div>
+        <div class="nav-item" onclick="window.App.navigateTo('bookings')"><i class="fas fa-handshake"></i><span>Bookings</span></div>
+        <div class="nav-item" onclick="window.App.navigateTo('more')"><i class="fas fa-ellipsis-h"></i><span>More</span></div>
+    </nav>
+
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-sheet" id="modalSheet">
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPT ENGINE -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEAMpmFOKF4fhF1Weh8ZB_G7aXFEA-aBM",
+            authDomain: "crm-true-nova-realty.firebaseapp.com",
+            databaseURL: "https://crm-true-nova-realty-default-rtdb.firebaseio.com",
+            projectId: "crm-true-nova-realty",
+            storageBucket: "crm-true-nova-realty.firebasestorage.app",
+            messagingSenderId: "804842045059",
+            appId: "1:804842045059:web:234ec22d9a4ab8d77fa5b6",
+            measurementId: "G-LY2NP3SEFJ"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const WHATSAPP_SVG = `<svg viewBox="0 0 24 24"><path d="M12.031 2c-5.417 0-9.828 4.412-9.828 9.831 0 1.726.447 3.414 1.296 4.902l-1.378 5.034 5.163-1.353c1.433.782 3.048 1.192 4.747 1.192 5.418 0 9.829-4.412 9.829-9.831s-4.411-9.829-9.829-9.829zm0 17.977c-1.464 0-2.898-.393-4.148-1.137l-.298-.177-3.083.808.822-3.003-.194-.309c-.818-1.303-1.25-2.813-1.25-4.359 0-4.492 3.655-8.148 8.151-8.148 4.493 0 8.148 3.656 8.148 8.148 0 4.493-3.655 8.177-8.149 8.177zm4.464-6.13c-.245-.123-1.448-.715-1.673-.797-.225-.082-.389-.123-.553.123-.164.246-.635.797-.778.961-.143.164-.286.184-.531.061-.246-.123-1.038-.383-1.978-1.221-.732-.653-1.227-1.46-1.371-1.706-.143-.246-.015-.379.108-.502.111-.11.246-.286.369-.429.123-.143.164-.286.246-.41.082-.164.041-.307-.02-.43-.062-.123-.553-1.332-.758-1.824-.2-.48-.403-.414-.553-.422-.143-.008-.307-.008-.471-.008-.164 0-.43.062-.655.307-.225.246-.86.84-.86 2.05 0 1.209.88 2.378 1.003 2.542.123.164 1.731 2.643 4.193 3.707.586.253 1.044.404 1.401.518.59.187 1.127.16 1.551.096.472-.072 1.448-.592 1.653-1.163.205-.572.205-1.062.143-1.163-.061-.101-.225-.183-.47-.306z"/></svg>`;
+
+        const SoundFX = {
+            ctx: null,
+            init() { if (!this.ctx) this.ctx = new(window.AudioContext || window.webkitAudioContext)(); },
+            playSuccess() {
+                try { this.init(); const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                    osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+                } catch (e) {}
+            },
+            playClick() {
+                try { this.init(); const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                    osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+                } catch (e) {}
+            }
+        };
+
+        const NotificationEngine = {
+            show(msg, type = 'info', duration = 3000) {
+                const container = document.getElementById('toastContainer');
+                const el = document.createElement('div');
+                el.className = `toast ${type}`;
+                el.innerHTML = `<span>${msg}</span><button style="background:none;border:none;color:#fff;margin-left:auto;font-size:1.2rem;" onclick="this.parentElement.remove()">&times;</button>`;
+                container.appendChild(el);
+                setTimeout(() => { if (el.parentElement) el.remove(); }, duration);
+            }
+        };
+
+        const App = {
+            currentUser: null,
+            userRole: 'Executive',
+            leads: [],
+            allCloudLeads: [],
+            bookingsList: [],
+            allCloudBookings: [],
+            projectsList: [],
+            executivesList: [],
+            currentPage: 'dashboard',
+            activeFuTab: 'today',
+            isDarkMode: false,
+            hasNotifiedToday: false,
+
+            init() {
+                setTimeout(() => {
+                    document.getElementById('splashScreen').classList.add('hide');
+                }, 2000);
+
+                auth.onAuthStateChanged(user => {
+                    if (user) {
+                        this.currentUser = user;
+                        document.getElementById('authOverlay').style.display = 'none';
+                        const email = (user.email || '').toLowerCase();
+                        if (email.includes('bhavana') || email.includes('bhawana') || email.includes('admin')) {
+                            this.userRole = 'Admin';
+                            document.getElementById('adminControlsArea').style.display = 'block';
+                            document.getElementById('adminBulkAssignHeaderBtn').style.display = 'block';
+                            document.getElementById('userRoleTag').className = 'role-badge admin';
+                        } else {
+                            this.userRole = 'Executive';
+                            document.getElementById('adminControlsArea').style.display = 'none';
+                            document.getElementById('adminBulkAssignHeaderBtn').style.display = 'none';
+                            document.getElementById('userRoleTag').className = 'role-badge';
+                        }
+                        document.getElementById('userRoleTag').textContent = this.userRole;
+                        this.loadRealtimeProjects();
+                        this.loadRealtimeLeads();
+                        this.loadRealtimeBookings();
+                        this.loadRealtimeExecutives();
+                        this.requestPushNotificationPermission();
+                    } else {
+                        document.getElementById('authOverlay').style.display = 'flex';
+                    }
+                });
+            },
+
+            requestPushNotificationPermission() {
+                if ("Notification" in window) {
+                    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                        Notification.requestPermission();
+                    }
+                }
+            },
+
+            handleLogin(e) {
+                e.preventDefault();
+                SoundFX.playClick();
+                const email = document.getElementById('loginEmail').value.trim();
+                const pass = document.getElementById('loginPassword').value.trim();
+                auth.signInWithEmailAndPassword(email, pass)
+                    .then(() => {
+                        SoundFX.playSuccess();
+                        NotificationEngine.show("Logged in successfully!", "success");
+                    })
+                    .catch(err => alert("Login Failed: " + err.message));
+            },
+
+            handleLogout() {
+                SoundFX.playClick();
+                auth.signOut();
+                this.closeModal();
+            },
+
+            openProfileModal() {
+                SoundFX.playClick();
+                if (!this.currentUser) return;
+                const email = this.currentUser.email;
+                const role = this.userRole;
+                const totalMyLeads = this.leads.length;
+                const totalMyBookings = this.bookingsList.length;
+
+                const execProfile = this.executivesList.find(e => e.email === email) || { fullName: 'Bhavana Rahate', gender: 'Female', phone: '7709966140', photoUrl: '1000573949-removebg-preview.png' };
+
+                document.getElementById('modalContent').innerHTML = `
+                    <div style="text-align:center;margin-bottom:16px;">
+                        <img src="${execProfile.photoUrl || '1000573949-removebg-preview.png'}" alt="Profile Photo" style="width:75px;height:75px;object-fit:cover;border-radius:50%;border:2px solid var(--accent);background:#fff;padding:2px;" />
+                        <h3 style="margin-top:8px;font-size:1.15rem;font-weight:900;">${execProfile.fullName || 'True Nova User'}</h3>
+                        <span class="role-badge ${role==='Admin'?'admin':''}" style="margin-top:4px;display:inline-block;">${role}</span>
+                    </div>
+                    <div class="tn-grid">
+                        <div class="tn-row"><span>Email ID</span>${email}</div>
+                        <div class="tn-row"><span>Mobile No.</span>${execProfile.phone || '7709966140'}</div>
+                        <div class="tn-row"><span>Gender</span>${execProfile.gender || 'Not Specified'}</div>
+                        <div class="tn-row"><span>My Leads / Bookings</span>${totalMyLeads} / ${totalMyBookings}</div>
+                    </div>
+                    <div class="form-group" style="margin-top:14px;">
+                        <button class="btn btn-outline btn-sm" style="width:100%;" onclick="window.App.openEditProfileModal('${email}')"><i class="fas fa-user-edit"></i> Edit My Profile & Photo</button>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:16px;">
+                        <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Close</button>
+                        <button type="button" class="btn btn-danger" style="flex:1;background:var(--danger);color:#fff;" onclick="window.App.handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    </div>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            openManageExecProfilesModal() {
+                SoundFX.playClick();
+                if (this.userRole !== 'Admin') {
+                    alert("Access Denied!");
+                    return;
+                }
+                const listHTML = !this.executivesList.length ?
+                    `<p style="text-align:center;color:var(--text-muted);padding:20px;">No executives found.</p>` :
+                    this.executivesList.map(ex => `
+                        <div style="background:rgba(148,163,184,0.1);padding:12px;border-radius:var(--radius-md);margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+                            <img src="${ex.photoUrl || '1000573949-removebg-preview.png'}" style="width:45px;height:45px;object-fit:cover;border-radius:50%;border:1px solid var(--accent);background:#fff;" />
+                            <div style="flex:1;">
+                                <h4 style="font-size:0.95rem;font-weight:800;color:var(--primary);">${ex.fullName || 'No Name'} (${ex.gender || 'N/A'})</h4>
+                                <p style="font-size:0.78rem;color:var(--text-muted);">📧 ${ex.email} | 📞 ${ex.phone || 'N/A'}</p>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="window.App.openEditProfileModal('${ex.email}')"><i class="fas fa-edit"></i> Edit</button>
+                        </div>
+                    `).join('');
+
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-id-badge" style="color:var(--accent);"></i> Manage Executives Profile (${this.executivesList.length})</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Admin can edit any executive's details and upload their photo.</p>
+                    <div style="max-height:340px;overflow-y:auto;margin-bottom:14px;">${listHTML}</div>
+                    <button class="btn btn-outline" onclick="window.App.closeModal()">Close</button>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            openEditProfileModal(email) {
+                SoundFX.playClick();
+                const cur = this.executivesList.find(e => e.email === email) || {};
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-user-edit"></i> Edit Profile: ${email}</h3>
+                    <form onsubmit="window.App.saveProfileInfo(event, '${email}')">
+                        <div class="form-group"><label>Full Name</label><input type="text" id="pf_name" value="${cur.fullName || ''}" required placeholder="Full Name" /></div>
+                        <div class="form-group"><label>Mobile Number</label><input type="tel" id="pf_phone" value="${cur.phone || ''}" required placeholder="10-digit phone" /></div>
+                        <div class="form-group"><label>Gender</label><select id="pf_gender"><option value="Female" ${cur.gender==='Female'?'selected':''}>Female</option><option value="Male" ${cur.gender==='Male'?'selected':''}>Male</option><option value="Other" ${cur.gender==='Other'?'selected':''}>Other</option></select></div>
+                        <div class="form-group"><label>Upload Photo (Gallery)</label><input type="file" id="pf_file" accept="image/*" onchange="window.App.handleImageUpload(event)" /></div>
+                        <input type="hidden" id="pf_photo" value="${cur.photoUrl || ''}" />
+                        <div style="display:flex;gap:10px;margin-top:16px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;">Save Profile</button>
+                        </div>
+                    </form>
+                `;
+            },
+
+            handleImageUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('pf_photo').value = e.target.result;
+                        NotificationEngine.show("Photo loaded successfully!", "success");
+                    };
+                    reader.readAsDataURL(file);
+                }
+            },
+
+            saveProfileInfo(e, email) {
+                e.preventDefault();
+                const name = document.getElementById('pf_name').value.trim();
+                const phone = document.getElementById('pf_phone').value.trim();
+                const gender = document.getElementById('pf_gender').value;
+                const photo = document.getElementById('pf_photo').value.trim();
+
+                let rec = this.executivesList.find(e => e.email === email);
+                if (rec) {
+                    db.collection('executives').doc(rec.id).update({
+                        fullName: name, phone: phone, gender: gender, photoUrl: photo
+                    }).then(() => {
+                        SoundFX.playSuccess();
+                        NotificationEngine.show("Profile updated successfully!", "success");
+                        this.closeModal();
+                    });
+                } else {
+                    db.collection('executives').add({
+                        email: email, fullName: name, phone: phone, gender: gender, photoUrl: photo, createdAt: new Date().toISOString()
+                    }).then(() => {
+                        SoundFX.playSuccess();
+                        NotificationEngine.show("Profile created successfully!", "success");
+                        this.closeModal();
+                    });
+                }
+            },
+
+            openBulkAssignModal() {
+                SoundFX.playClick();
+                if (this.userRole !== 'Admin') {
+                    alert("Access Denied! Only Admin can assign leads.");
+                    return;
+                }
+                const unassignedLeads = this.allCloudLeads;
+                const execOptions = this.executivesList.map(ex => `<option value="${ex.email}">${ex.email}</option>`).join('') + `<option value="${this.currentUser.email}">Admin (${this.currentUser.email})</option>`;
+                
+                const leadsCheckboxHTML = !unassignedLeads.length ? 
+                    `<p style="color:var(--text-muted);font-size:0.85rem;">No leads available.</p>` :
+                    unassignedLeads.map(l => `
+                        <label style="display:flex;align-items:center;gap:10px;background:rgba(148,163,184,0.08);padding:8px 10px;border-radius:6px;margin-bottom:6px;font-size:0.85rem;cursor:pointer;">
+                            <input type="checkbox" name="bulkLeadChk" value="${l.id}" style="width:16px;height:16px;" />
+                            <span><b>${l.customerName}</b> (${l.mobile}) — <i>Current: ${l.createdBy || 'Admin'}</i></span>
+                        </label>
+                    `).join('');
+
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-tasks" style="color:var(--accent);"></i> Bulk Assign Leads (Admin)</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">Select leads and assign them to an executive. Assigned leads will automatically appear in their <b>New Leads</b> list.</p>
+                    <form onsubmit="window.App.processBulkAssignment(event)">
+                        <div class="form-group"><label>Select Target Executive</label><select id="bulkTargetExec" required>${execOptions}</select></div>
+                        <div class="form-group"><label>Select Leads (${unassignedLeads.length} Total):</label><div style="max-height:220px;overflow-y:auto;border:1px solid var(--border-color);padding:8px;border-radius:8px;">${leadsCheckboxHTML}</div></div>
+                        <div style="display:flex;gap:10px;margin-top:16px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;">Assign & Set as New</button>
+                        </div>
+                    </form>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            processBulkAssignment(e) {
+                e.preventDefault();
+                const targetEmail = document.getElementById('bulkTargetExec').value;
+                const checkboxes = document.querySelectorAll('input[name="bulkLeadChk"]:checked');
+                
+                if (checkboxes.length === 0) {
+                    alert("Please select at least one lead!");
+                    return;
+                }
+
+                const batch = db.batch();
+                checkboxes.forEach(chk => {
+                    const leadRef = db.collection('leads').doc(chk.value);
+                    batch.update(leadRef, { createdBy: targetEmail, status: 'New', assignedAt: new Date().toISOString() });
+                });
+
+                batch.commit().then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show(`${checkboxes.length} leads assigned to ${targetEmail} as New Leads!`, "success");
+                    this.closeModal();
+                });
+            },
+
+            loadRealtimeProjects() {
+                db.collection('projects').onSnapshot(snapshot => {
+                    this.projectsList = [];
+                    snapshot.forEach(doc => this.projectsList.push({ id: doc.id, ...doc.data() }));
+                    if (this.projectsList.length === 0) {
+                        this.projectsList = [{ id: 'default', name: 'Avani Nagar 1' }];
+                    }
+                    this.populateProjectDropdowns();
+                });
+            },
+
+            loadRealtimeExecutives() {
+                db.collection('executives').onSnapshot(snapshot => {
+                    this.executivesList = [];
+                    snapshot.forEach(doc => this.executivesList.push({ id: doc.id, ...doc.data() }));
+                });
+            },
+
+            populateProjectDropdowns() {
+                const filterSelect = document.getElementById('projectFilterSelect');
+                if (filterSelect) {
+                    filterSelect.innerHTML = `<option value="all">All Projects</option>` +
+                        this.projectsList.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+                }
+            },
+
+            loadRealtimeLeads() {
+                db.collection('leads').onSnapshot(snapshot => {
+                    this.allCloudLeads = [];
+                    snapshot.forEach(doc => this.allCloudLeads.push({ id: doc.id, ...doc.data() }));
+                    if (this.userRole === 'Executive' && this.currentUser) {
+                        this.leads = this.allCloudLeads.filter(l => l.createdBy === this.currentUser.email);
+                    } else {
+                        this.leads = [...this.allCloudLeads];
+                    }
+                    this.renderCurrentPage();
+                    this.checkAndFirePushNotifications();
+                }, err => console.log("Snapshot Error: ", err));
+            },
+
+            loadRealtimeBookings() {
+                db.collection('bookings').onSnapshot(snapshot => {
+                    this.allCloudBookings = [];
+                    snapshot.forEach(doc => this.allCloudBookings.push({ id: doc.id, ...doc.data() }));
+
+                    if (this.userRole === 'Executive' && this.currentUser) {
+                        this.bookingsList = this.allCloudBookings.filter(b => b.createdBy === this.currentUser.email);
+                    } else {
+                        this.bookingsList = [...this.allCloudBookings];
+                    }
+
+                    if (this.currentPage === 'bookings') {
+                        this.renderBookings();
+                    }
+                    this.renderDashboard();
+                });
+            },
+
+            checkAndFirePushNotifications() {
+                if (this.hasNotifiedToday) return;
+                const today = new Date().toISOString().slice(0, 10);
+                const activeLeads = this.leads.filter(l => (l.status || 'New') !== 'Not Interested');
+                const todayTasks = activeLeads.filter(l => (l.nextFollowupDate === today || !l.nextFollowupDate) && l.status !== 'Completed');
+
+                if (todayTasks.length > 0) {
+                    this.hasNotifiedToday = true;
+                    todayTasks.forEach((task, index) => {
+                        const custName = task.customerName || 'Customer';
+                        const callTime = task.nextFollowupTime || '09:00 AM';
+                        const projName = task.project || 'Avani Nagar 1';
+                        const msgTitle = `True Nova Follow-up: ${custName}`;
+                        const msgBody = `Project: ${projName}\nTime: ${callTime} par call karein!`;
+
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            try {
+                                setTimeout(() => {
+                                    new Notification(msgTitle, {
+                                        body: msgBody,
+                                        icon: "1000573949-removebg-preview.png"
+                                    });
+                                }, index * 1500);
+                            } catch(e) {}
+                        }
+                    });
+                }
+            },
+
+            renderCurrentPage() {
+                this.renderDashboard();
+                if (this.currentPage === 'leads') this.renderLeads();
+                if (this.currentPage === 'tasks') this.renderTasks();
+                if (this.currentPage === 'bookings') this.renderBookings();
+            },
+
+            renderDashboard() {
+                const today = new Date().toISOString().slice(0, 10);
+                const activeLeads = this.leads.filter(l => (l.status || 'New') !== 'Not Interested');
+                const newLeads = activeLeads.filter(l => l.status === 'New').length;
+                const todayTasks = activeLeads.filter(l => (l.nextFollowupDate === today || !l.nextFollowupDate) && l.status !== 'Completed');
+                const siteVisits = activeLeads.filter(l => l.status === 'Site Visit').length;
+                const followupLeadsCount = this.leads.filter(l => (l.status || 'New') === 'Follow-up').length;
+                const notInterestedCount = this.allCloudLeads.filter(l => (this.userRole === 'Admin' || l.createdBy === (this.currentUser ? this.currentUser.email : '')) && (l.status || 'New') === 'Not Interested').length;
+                const bookingsCount = this.bookingsList.length;
+                const overdueTasks = activeLeads.filter(l => l.nextFollowupDate < today && l.nextFollowupDate !== '' && l.status !== 'Completed');
+
+                document.getElementById('statTotalLeads').textContent = activeLeads.length;
+                document.getElementById('statNewLeads').textContent = newLeads;
+                document.getElementById('statTodayTasks').textContent = todayTasks.length;
+                document.getElementById('statSiteVisits').textContent = siteVisits;
+                document.getElementById('statBookings').textContent = bookingsCount;
+                
+                const fCountEl = document.getElementById('statFollowupLeads');
+                const niCountEl = document.getElementById('statNotInterestedLeads');
+                if(fCountEl) fCountEl.textContent = followupLeadsCount;
+                if(niCountEl) niCountEl.textContent = notInterestedCount;
+
+                const alertEl = document.getElementById('overdueAlertBanner');
+                if (overdueTasks.length > 0) {
+                    alertEl.style.display = 'flex';
+                    document.getElementById('overdueCount').textContent = overdueTasks.length;
+                } else {
+                    alertEl.style.display = 'none';
+                }
+
+                document.getElementById('recentLeadCount').textContent = activeLeads.length;
+                const recentContainer = document.getElementById('recentLeadsContainer');
+                recentContainer.innerHTML = !activeLeads.length ?
+                    `<p style="text-align:center;padding:15px;color:var(--text-muted);">No active leads found.</p>` :
+                    activeLeads.slice(0, 3).map(l => {
+                        const lastRemark = (l.callLogs && l.callLogs.length > 0) ? l.callLogs[0].remark : (l.notes || 'No remarks yet');
+                        return `
+                        <div class="lead-card" onclick="window.App.openLeadDetailsModal('${l.id}')">
+                            <div class="lead-top">
+                                <span class="lead-name">${l.customerName}</span>
+                                <span class="status-badge">${l.status || 'FOLLOW-UP'}</span>
+                            </div>
+                            <div class="lead-info-row">
+                                <span><i class="fas fa-phone"></i> ${l.mobile}</span>
+                            </div>
+                            <div class="lead-last-remark"><i class="fas fa-comment-dots"></i> Last Note: ${lastRemark}</div>
+                        </div>`;
+                    }).join('');
+
+                document.getElementById('todayFollowupCount').textContent = todayTasks.length;
+                const fuContainer = document.getElementById('todayFollowupsContainer');
+                fuContainer.innerHTML = !todayTasks.length ?
+                    `<p style="text-align:center;padding:15px;color:var(--text-muted);">No follow-ups for today!</p>` :
+                    todayTasks.map(f => {
+                        const lastRemark = (f.callLogs && f.callLogs.length > 0) ? f.callLogs[0].remark : (f.notes || 'No remarks yet');
+                        const priority = f.priority || 'Medium';
+                        const priorityClass = priority === 'High' ? 'priority-high' : (priority === 'Low' ? 'priority-low' : 'priority-medium');
+                        return `
+                        <div class="lead-card" style="border-left-color:var(--warning);" onclick="window.App.openLeadDetailsModal('${f.id}')">
+                            <div class="lead-top">
+                                <span class="lead-name">${f.customerName} <span class="priority-badge ${priorityClass}">${priority}</span></span>
+                                <span class="status-badge pending">Pending</span>
+                            </div>
+                            <div class="lead-info-row">
+                                <span><i class="fas fa-phone"></i> ${f.mobile}</span>
+                                <span><i class="far fa-clock"></i> ${f.nextFollowupTime || '09:00'}</span>
+                            </div>
+                            <div class="lead-last-remark"><i class="fas fa-comment-dots"></i> Last Note: ${lastRemark}</div>
+                            <div class="lead-actions-5" onclick="event.stopPropagation()">
+                                <button class="btn-act act-call" title="Call & Log Note" onclick="window.App.openCallLogModal('${f.id}','${f.customerName}','${f.mobile}')"><i class="fas fa-phone"></i></button>
+                                <button class="btn-act act-wa" title="Advanced WhatsApp Share" onclick="window.App.openAdvancedWhatsAppModal('${f.mobile}','${f.customerName}','${f.project || 'Avani Nagar 1'}')">${WHATSAPP_SVG}</button>
+                                <button class="btn-act act-done" title="Mark Done" onclick="window.App.markTaskDone('${f.id}')"><i class="fas fa-check"></i></button>
+                            </div>
+                        </div>`;
+                    }).join('');
+            },
+
+            filterLeadsByStatus(statusVal) {
+                this.navigateTo('leads');
+                setTimeout(() => {
+                    const sel = document.getElementById('statusFilterSelect');
+                    if(sel) {
+                        sel.value = statusVal;
+                        this.renderLeads();
+                    }
+                }, 100);
+            },
+
+            renderLeads() {
+                const search = (document.getElementById('leadSearchInput') ? document.getElementById('leadSearchInput').value : '').toLowerCase().trim();
+                const statusFilter = document.getElementById('statusFilterSelect') ? document.getElementById('statusFilterSelect').value : 'all';
+                const projectFilter = document.getElementById('projectFilterSelect') ? document.getElementById('projectFilterSelect').value : 'all';
+
+                let filtered = this.allCloudLeads.filter(l => {
+                    if (this.userRole === 'Executive' && l.createdBy !== (this.currentUser ? this.currentUser.email : '')) return false;
+                    const matchSearch = (l.customerName || '').toLowerCase().includes(search) || (l.mobile || '').includes(search);
+                    const matchStatus = statusFilter === 'all' || (l.status || 'New') === statusFilter;
+                    const matchProject = projectFilter === 'all' || (l.project || 'Avani Nagar 1') === projectFilter;
+                    
+                    if (search.length > 0) {
+                        return matchSearch && matchProject && (statusFilter === 'all' || matchStatus);
+                    } else {
+                        if (statusFilter === 'Not Interested') {
+                            return (l.status || 'New') === 'Not Interested' && matchProject;
+                        }
+                        const isNotInterested = (l.status || 'New') === 'Not Interested';
+                        return !isNotInterested && matchSearch && matchStatus && matchProject;
+                    }
+                });
+
+                const container = document.getElementById('leadsListContainer');
+                if (!container) return;
+                container.innerHTML = !filtered.length ?
+                    `<p style="text-align:center;padding:30px;color:var(--text-muted);font-weight:600;">No leads matching filters.</p>` :
+                    filtered.map(l => {
+                        const callCount = (l.callLogs || []).length;
+                        const lastRemark = (l.callLogs && l.callLogs.length > 0) ? l.callLogs[0].remark : (l.notes || 'No remarks yet');
+                        return `
+                        <div class="lead-card" onclick="window.App.openLeadDetailsModal('${l.id}')">
+                            <div class="lead-top">
+                                <span class="lead-name">
+                                    ${l.customerName}
+                                    ${callCount > 0 ? `<span class="call-count-badge"><i class="fas fa-phone-alt"></i> ${callCount} Calls</span>` : ''}
+                                </span>
+                                <span class="status-badge">${(l.status || 'FOLLOW-UP').toUpperCase()}</span>
+                            </div>
+                            <div class="lead-info-row">
+                                <span><i class="fas fa-phone"></i> ${l.mobile}</span>
+                                <span><i class="fas fa-building"></i> ${l.project || 'Avani Nagar 1'}</span>
+                                <span><i class="far fa-calendar-alt"></i> ${l.nextFollowupDate || '2026-08-16'}</span>
+                            </div>
+                            <div class="lead-last-remark"><i class="fas fa-comment-dots"></i> Last Note: ${lastRemark}</div>
+                            <div class="lead-actions-5" onclick="event.stopPropagation()">
+                                <button class="btn-act act-call" title="Call & Add Note" onclick="window.App.openCallLogModal('${l.id}','${l.customerName}','${l.mobile}')"><i class="fas fa-phone"></i></button>
+                                <button class="btn-act act-wa" title="Advanced WhatsApp Share" onclick="window.App.openAdvancedWhatsAppModal('${l.mobile}','${l.customerName}','${l.project || 'Avani Nagar 1'}')">${WHATSAPP_SVG}</button>
+                                <button class="btn-act act-pdf" title="Generate Quotation" onclick="window.App.openQuotationForLead('${l.customerName}','${l.mobile}','${l.project || 'Avani Nagar 1'}')"><i class="fas fa-file-invoice-dollar"></i></button>
+                                <button class="btn-act act-edit" title="Edit Lead" onclick="window.App.openEditLeadModal('${l.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-act act-history" title="Call History Timeline" onclick="window.App.openCallHistoryModal('${l.id}')"><i class="fas fa-history"></i></button>
+                                ${this.userRole === 'Admin' ? `<button class="btn-act act-del" title="Delete Lead" onclick="window.App.deleteLead('${l.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('');
+            },
+
+            openLeadDetailsModal(id) {
+                SoundFX.playClick();
+                const lead = this.allCloudLeads.find(l => l.id === id);
+                if (!lead) return;
+                const logs = lead.callLogs || [];
+                const historyHTML = !logs.length ?
+                    `<p style="color:var(--text-muted);font-size:0.82rem;">No past call logs.</p>` :
+                    logs.map(log => `<div style="font-size:0.8rem;border-left:2px solid var(--accent);padding-left:8px;margin-bottom:6px;"><b>${log.date}</b>: ${log.remark}</div>`).join('');
+
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-user-circle" style="color:var(--accent);"></i> Lead Details</h3>
+                    <div class="tn-grid" style="margin-top:12px;">
+                        <div class="tn-row"><span>Customer Name</span>${lead.customerName}</div>
+                        <div class="tn-row"><span>Mobile Number</span><a href="tel:${lead.mobile}" style="color:var(--info);text-decoration:none;">${lead.mobile}</a></div>
+                        <div class="tn-row"><span>Project</span>${lead.project || 'Avani Nagar 1'}</div>
+                        <div class="tn-row"><span>Status</span>${lead.status || 'New'}</div>
+                        <div class="tn-row"><span>Next Follow-up</span>${lead.nextFollowupDate || 'Not Scheduled'} (${lead.nextFollowupTime || '09:00'})</div>
+                        <div class="tn-row"><span>Created By</span>${lead.createdBy || 'Admin'}</div>
+                    </div>
+                    <div class="form-group"><label>Latest Note / Remarks</label><div style="background:rgba(148,163,184,0.1);padding:10px;border-radius:8px;font-size:0.88rem;font-weight:600;">${lead.notes || 'No initial notes.'}</div></div>
+                    <div class="form-group"><label>Past Call Logs Timeline</label><div style="max-height:120px;overflow-y:auto;background:rgba(148,163,184,0.05);padding:10px;border-radius:8px;">${historyHTML}</div></div>
+                    <div style="display:flex;gap:8px;margin-top:16px;">
+                        <button class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Close</button>
+                        <button class="btn btn-primary" style="flex:1;" onclick="window.App.openEditLeadModal('${lead.id}')"><i class="fas fa-edit"></i> Edit & Schedule</button>
+                    </div>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            renderTasks() {
+                const today = new Date().toISOString().slice(0, 10);
+                const activeLeads = this.leads.filter(l => (l.status || 'New') !== 'Not Interested');
+
+                const todayTasks = activeLeads.filter(l => (l.nextFollowupDate === today || !l.nextFollowupDate) && l.status !== 'Completed');
+                const overdueTasks = activeLeads.filter(l => l.nextFollowupDate < today && l.nextFollowupDate !== '' && l.status !== 'Completed');
+                const upcomingTasks = activeLeads.filter(l => l.nextFollowupDate > today && l.status !== 'Completed');
+
+                const tCountEl = document.getElementById('fuCountToday');
+                const oCountEl = document.getElementById('fuCountOverdue');
+                const uCountEl = document.getElementById('fuCountUpcoming');
+
+                if (tCountEl) tCountEl.textContent = todayTasks.length;
+                if (oCountEl) oCountEl.textContent = overdueTasks.length;
+                if (uCountEl) uCountEl.textContent = upcomingTasks.length;
+
+                let displayTasks = [];
+                if (this.activeFuTab === 'today') displayTasks = todayTasks;
+                if (this.activeFuTab === 'overdue') displayTasks = overdueTasks;
+                if (this.activeFuTab === 'upcoming') displayTasks = upcomingTasks;
+
+                const container = document.getElementById('tasksListContainer');
+                if (!container) return;
+
+                container.innerHTML = !displayTasks.length ?
+                    `<p style="text-align:center;padding:30px;color:var(--text-muted);font-weight:600;">No ${this.activeFuTab} follow-ups!</p>` :
+                    displayTasks.map(f => {
+                        const priority = f.priority || 'Medium';
+                        const priorityClass = priority === 'High' ? 'priority-high' : (priority === 'Low' ? 'priority-low' : 'priority-medium');
+                        const lastRemark = (f.callLogs && f.callLogs.length > 0) ? f.callLogs[0].remark : (f.notes || 'No remarks yet');
+                        return `
+                        <div class="lead-card" style="border-left-color:${this.activeFuTab === 'overdue' ? 'var(--danger)' : 'var(--accent)'}" onclick="window.App.openLeadDetailsModal('${f.id}')">
+                            <div class="lead-top">
+                                <span class="lead-name">${f.customerName} <span class="priority-badge ${priorityClass}">${priority}</span></span>
+                                <span class="status-badge ${this.activeFuTab === 'overdue' ? 'overdue' : 'pending'}">${this.activeFuTab === 'overdue' ? 'Overdue' : 'Pending'}</span>
+                            </div>
+                            <div class="lead-info-row">
+                                <span><i class="far fa-calendar-alt"></i> ${f.nextFollowupDate || today}</span>
+                                <span><i class="far fa-clock"></i> ${f.nextFollowupTime || '09:00'}</span>
+                                <span><i class="fas fa-phone"></i> ${f.mobile}</span>
+                                <span><i class="fas fa-building"></i> ${f.project || 'Avani Nagar 1'}</span>
+                            </div>
+                            <div class="lead-last-remark"><i class="fas fa-comment-dots"></i> Last Note: ${lastRemark}</div>
+                            <div class="lead-actions-5" onclick="event.stopPropagation()">
+                                <button class="btn-act act-call" title="Call & Log Note" onclick="window.App.openCallLogModal('${f.id}', '${f.customerName}', '${f.mobile}')"><i class="fas fa-phone"></i></button>
+                                <button class="btn-act act-wa" title="Advanced WhatsApp Share" onclick="window.App.openAdvancedWhatsAppModal('${f.mobile}','${f.customerName}','${f.project || 'Avani Nagar 1'}')">${WHATSAPP_SVG}</button>
+                                <button class="btn-act act-done" title="Mark Complete" onclick="window.App.markTaskDone('${f.id}')"><i class="fas fa-check"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    }).join('');
+            },
+
+            renderBookings() {
+                const container = document.getElementById('bookingsListContainer');
+                if (!container) return;
+                container.innerHTML = !this.bookingsList.length ?
+                    `<p style="text-align:center;padding:30px;color:var(--text-muted);font-weight:600;">No bookings found. Click 'New Booking' to add one!</p>` :
+                    this.bookingsList.map(b =>
+                        `<div class="lead-card booking-card"><div class="lead-top"><span class="lead-name">${b.customerName}<span class="plot-number-badge"><i class="fas fa-map-marker-alt"></i> ${b.plotNumber || 'Plot N/A'}</span></span><span class="status-badge booked">BOOKED</span></div><div class="lead-info-row"><span><i class="fas fa-phone"></i> ${b.mobile}</span><span><i class="fas fa-building"></i> ${b.project || 'Avani Nagar 1'}</span><span><i class="fas fa-rupee-sign"></i> Token: <strong>₹${(b.tokenAmount || 0).toLocaleString()}</strong></span></div><div class="lead-info-row" style="margin-top:4px;"><span><i class="fas fa-credit-card"></i> Payment: ${b.paymentMode || 'Cash/UPI'}</span><span><i class="fas fa-calendar"></i> Date: ${b.bookingDate || 'N/A'}</span> ${this.userRole === 'Admin' ? `<span><i class="fas fa-user-shield"></i> Exec: ${b.createdBy || 'Admin'}</span>` : ''}</div><div class="lead-actions-5"><button class="btn-act act-call" onclick="window.location.href='tel:${b.mobile}'"><i class="fas fa-phone"></i></button><button class="btn-act act-wa" onclick="window.App.openAdvancedWhatsAppModal('${b.mobile}','${b.customerName}','${b.project || 'Avani Nagar 1'}')">${WHATSAPP_SVG}</button><button class="btn-act act-edit" onclick="window.App.openEditBookingModal('${b.id}')"><i class="fas fa-edit"></i></button><button class="btn-act act-del" onclick="window.App.deleteBooking('${b.id}')"><i class="fas fa-trash"></i></button></div></div>`
+                    ).join('');
+            },
+
+            openBookingFormModal() {
+                SoundFX.playClick();
+                const today = new Date().toISOString().slice(0, 10);
+                const projOptions = this.projectsList.length > 0 ?
+                    this.projectsList.map(p => `<option value="${p.name}">${p.name}</option>`).join('') :
+                    `<option value="Avani Nagar 1">Avani Nagar 1</option>`;
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-handshake"></i> New Plot Booking Form</h3>
+                    <form onsubmit="window.App.savePlotBooking(event)">
+                        <div class="form-group"><label>Customer Name</label><input type="text" id="bk_name" required placeholder="Full Name" /></div>
+                        <div class="form-group"><label>Mobile Number</label><input type="tel" id="bk_mobile" required pattern="[0-9]{10}" placeholder="10-digit number" /></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Project</label><select id="bk_project">${projOptions}</select></div>
+                            <div class="form-group"><label>Plot Number</label><input type="text" id="bk_plot_no" required placeholder="e.g. Plot No. 45" /></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Token Amount (₹)</label><input type="number" id="bk_token_amount" required placeholder="e.g. 50000" /></div>
+                            <div class="form-group"><label>Payment Mode</label><select id="bk_payment_mode"><option value="Online / UPI">Online / UPI</option><option value="Cash">Cash</option><option value="Cheque">Cheque</option><option value="Bank Transfer">Bank Transfer</option></select></div>
+                        </div>
+                        <div class="form-group"><label>Booking Date</label><input type="date" id="bk_date" value="${today}" /></div>
+                        <div style="display:flex;gap:12px;margin-top:16px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-success" style="flex:1;"><i class="fas fa-check-circle"></i> Save Plot Booking</button>
+                        </div>
+                    </form>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            savePlotBooking(e) {
+                e.preventDefault();
+                const name = document.getElementById('bk_name').value.trim();
+                const mobile = document.getElementById('bk_mobile').value.trim();
+                const project = document.getElementById('bk_project').value;
+                const plotNo = document.getElementById('bk_plot_no').value.trim();
+                const tokenAmt = parseFloat(document.getElementById('bk_token_amount').value) || 0;
+                const payMode = document.getElementById('bk_payment_mode').value;
+                const bookDate = document.getElementById('bk_date').value;
+
+                db.collection('bookings').add({
+                    customerName: name, mobile: mobile, project: project, plotNumber: plotNo,
+                    tokenAmount: tokenAmt, paymentMode: payMode, bookingDate: bookDate,
+                    createdBy: this.currentUser ? this.currentUser.email : 'Admin',
+                    createdAt: new Date().toISOString()
+                }).then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show(`Plot Booking saved for ${name}!`, "success");
+                    document.getElementById('modalOverlay').classList.remove('open');
+                });
+            },
+
+            openEditBookingModal(id) {
+                SoundFX.playClick();
+                const booking = this.allCloudBookings.find(b => b.id === id);
+                if (!booking) return;
+                const projOptions = this.projectsList.length > 0 ?
+                    this.projectsList.map(p => `<option value="${p.name}" ${booking.project===p.name?'selected':''}>${p.name}</option>`).join('') :
+                    `<option value="Avani Nagar 1">Avani Nagar 1</option>`;
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-edit"></i> Edit Plot Booking</h3>
+                    <form onsubmit="window.App.updatePlotBooking(event, '${id}')">
+                        <div class="form-group"><label>Customer Name</label><input type="text" id="ebk_name" value="${booking.customerName}" required /></div>
+                        <div class="form-group"><label>Mobile Number</label><input type="tel" id="ebk_mobile" value="${booking.mobile}" required pattern="[0-9]{10}" /></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Project</label><select id="ebk_project">${projOptions}</select></div>
+                            <div class="form-group"><label>Plot Number</label><input type="text" id="ebk_plot_no" value="${booking.plotNumber}" required /></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Token Amount (₹)</label><input type="number" id="ebk_token_amount" value="${booking.tokenAmount}" required /></div>
+                            <div class="form-group"><label>Payment Mode</label><select id="ebk_payment_mode"><option value="Online / UPI" ${booking.paymentMode==='Online / UPI'?'selected':''}>Online / UPI</option><option value="Cash" ${booking.paymentMode==='Cash'?'selected':''}>Cash</option><option value="Cheque" ${booking.paymentMode==='Cheque'?'selected':''}>Cheque</option><option value="Bank Transfer" ${booking.paymentMode==='Bank Transfer'?'selected':''}>Bank Transfer</option></select></div>
+                        </div>
+                        <div class="form-group"><label>Booking Date</label><input type="date" id="ebk_date" value="${booking.bookingDate || ''}" /></div>
+                        <div style="display:flex;gap:12px;margin-top:16px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;">Update Booking</button>
+                        </div>
+                    </form>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            updatePlotBooking(e, id) {
+                e.preventDefault();
+                db.collection('bookings').doc(id).update({
+                    customerName: document.getElementById('ebk_name').value.trim(),
+                    mobile: document.getElementById('ebk_mobile').value.trim(),
+                    project: document.getElementById('ebk_project').value,
+                    plotNumber: document.getElementById('ebk_plot_no').value.trim(),
+                    tokenAmount: parseFloat(document.getElementById('ebk_token_amount').value) || 0,
+                    paymentMode: document.getElementById('ebk_payment_mode').value,
+                    bookingDate: document.getElementById('ebk_date').value
+                }).then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Booking updated successfully!", "success");
+                    document.getElementById('modalOverlay').classList.remove('open');
+                });
+            },
+
+            deleteBooking(id) {
+                if (!confirm("Are you sure you want to delete this booking?")) return;
+                db.collection('bookings').doc(id).delete().then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Booking deleted successfully!", "warning");
+                });
+            },
+
+            openManageProjectsModal() {
+                SoundFX.playClick();
+                const projectsHTML = this.projectsList.map(p =>
+                    `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(148,163,184,0.1);padding:10px 14px;border-radius:var(--radius-md);margin-bottom:8px;"><span style="font-weight:700;font-size:0.95rem;">${p.name}</span><div style="display:flex;gap:8px;"><button class="btn-act act-edit" style="width:32px;height:32px;font-size:0.8rem;" onclick="window.App.editProjectName('${p.id}','${p.name}')"><i class="fas fa-edit"></i></button><button class="btn-act act-del" style="width:32px;height:32px;font-size:0.8rem;" onclick="window.App.deleteProject('${p.id}')"><i class="fas fa-trash"></i></button></div></div>`
+                ).join('');
+
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-city"></i> Manage Projects</h3>
+                    <form onsubmit="window.App.addNewProject(event)" style="margin-bottom:16px;">
+                        <div class="form-group"><label>Add New Project Name</label><input type="text" id="p_new_name" required placeholder="e.g. True Nova Enclave" /></div>
+                        <div style="display:flex;gap:10px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;"><i class="fas fa-plus"></i> Add Project</button>
+                        </div>
+                    </form>
+                    <h4 style="font-size:0.9rem;font-weight:800;margin-bottom:10px;">Active Projects List (${this.projectsList.length}):</h4>
+                    <div style="max-height:220px;overflow-y:auto;margin-bottom:14px;">${projectsHTML || '<p style="color:var(--text-muted);font-size:0.85rem;">No projects added yet.</p>'}</div>
+                    <button class="btn btn-outline" onclick="window.App.closeModal()">Close</button>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            addNewProject(e) {
+                e.preventDefault();
+                const pName = document.getElementById('p_new_name').value.trim();
+                if (pName) {
+                    db.collection('projects').add({ name: pName, createdAt: new Date().toISOString() })
+                        .then(() => {
+                            SoundFX.playSuccess();
+                            NotificationEngine.show(`Project "${pName}" Added!`, "success");
+                            this.openManageProjectsModal();
+                        });
+                }
+            },
+
+            editProjectName(id, oldName) {
+                SoundFX.playClick();
+                const newName = prompt("Edit Project Name:", oldName);
+                if (newName && newName.trim() !== "") {
+                    db.collection('projects').doc(id).update({ name: newName.trim() })
+                        .then(() => {
+                            SoundFX.playSuccess();
+                            NotificationEngine.show("Project updated!", "success");
+                            this.openManageProjectsModal();
+                        });
+                }
+            },
+
+            deleteProject(id) {
+                if (!confirm("Are you sure you want to delete this project?")) return;
+                db.collection('projects').doc(id).delete().then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Project deleted!", "warning");
+                    this.openManageProjectsModal();
+                });
+            },
+
+            openCreateUserModal() {
+                SoundFX.playClick();
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-user-shield"></i> Create Executive Credentials</h3>
+                    <form onsubmit="window.App.createNewUserCredentials(event)">
+                        <div class="form-group"><label>Executive Email ID</label><input type="email" id="newEmail" required placeholder="executive1@truenova.com" /></div>
+                        <div class="form-group"><label>Set Password</label><input type="text" id="newPass" required placeholder="Min 6 characters" minlength="6" /></div>
+                        <div style="display:flex;gap:10px;margin-top:16px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;">Create User ID</button>
+                        </div>
+                    </form>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            createNewUserCredentials(e) {
+                e.preventDefault();
+                const email = document.getElementById('newEmail').value.trim();
+                const pass = document.getElementById('newPass').value.trim();
+
+                let secondaryAuth;
+                try {
+                    secondaryAuth = firebase.app("SecondaryApp").auth();
+                } catch (err) {
+                    secondaryAuth = firebase.initializeApp(firebaseConfig, "SecondaryApp").auth();
+                }
+
+                secondaryAuth.createUserWithEmailAndPassword(email, pass)
+                    .then(() => {
+                        db.collection('executives').add({
+                            email: email, password: pass, createdAt: new Date().toISOString()
+                        }).then(() => {
+                            SoundFX.playSuccess();
+                            alert(`Executive Created Successfully!\nEmail: ${email}\nPassword: ${pass}`);
+                            App.closeModal();
+                        });
+                    })
+                    .catch(err => alert("Error: " + err.message));
+            },
+
+            openManageExecsModal() {
+                SoundFX.playClick();
+                const listHTML = !this.executivesList.length ?
+                    `<p style="text-align:center;color:var(--text-muted);padding:20px;">No executive accounts created yet.</p>` :
+                    this.executivesList.map(ex =>
+                        `<div style="background:rgba(148,163,184,0.1);padding:12px 14px;border-radius:var(--radius-md);margin-bottom:10px;border:1px solid var(--border-color);"><div style="font-size:0.9rem;font-weight:800;color:var(--primary);margin-bottom:4px;"><i class="fas fa-user"></i> ${ex.email}</div><div style="font-size:0.82rem;font-weight:700;color:var(--text-muted);">Password: <span style="background:var(--bg-card);padding:2px 8px;border-radius:4px;border:1px solid var(--border-color);color:var(--text-main);">${ex.password}</span></div><div style="display:flex;gap:8px;margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="window.App.editExecPassword('${ex.id}','${ex.email}','${ex.password}')"><i class="fas fa-edit"></i> Edit Password</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="window.App.deleteExecutive('${ex.id}')"><i class="fas fa-trash"></i> Delete</button></div></div>`
+                    ).join('');
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-users-cog"></i> Total Executives (${this.executivesList.length})</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Here is the list of all created staff user IDs and passwords.</p>
+                    <div style="max-height:320px;overflow-y:auto;margin-bottom:14px;">${listHTML}</div>
+                    <button class="btn btn-outline" onclick="window.App.closeModal()">Close</button>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            editExecPassword(id, email, oldPass) {
+                SoundFX.playClick();
+                const newPass = prompt(`Enter new password for ${email}:`, oldPass);
+                if (newPass && newPass.trim() !== "") {
+                    db.collection('executives').doc(id).update({ password: newPass.trim() })
+                        .then(() => {
+                            SoundFX.playSuccess();
+                            NotificationEngine.show("Password updated successfully!", "success");
+                            this.openManageExecsModal();
+                        });
+                }
+            },
+
+            deleteExecutive(id) {
+                if (!confirm("Are you sure you want to delete this executive record?")) return;
+                db.collection('executives').doc(id).delete().then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Executive record deleted!", "warning");
+                    this.openManageExecsModal();
+                });
+            },
+
+            openAdvancedWhatsAppModal(mobile, name, project) {
+                SoundFX.playClick();
+                const cleanNum = mobile ? mobile.replace(/\D/g, '') : '';
+                const defaultMsg = `Hello ${name || 'Sir/Madam'}, Greetings from True Nova Realty! Thank you for showing interest in our project *${project || 'Avani Nagar 1'}*. Please let us know when we can assist you further or arrange a site visit.`;
+
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fab fa-whatsapp" style="color:#25D366;"></i> Advanced WhatsApp Share</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:14px;">Sending to: <strong>${name} (+91 ${cleanNum})</strong></p>
+                    
+                    <div class="form-group">
+                        <label>Custom Message</label>
+                        <textarea id="waCustomMessage" style="height:100px;">${defaultMsg}</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Attach Property Image / Document (Optional)</label>
+                        <input type="file" id="waImageFile" accept="image/*,.pdf,.doc,.docx" />
+                    </div>
+
+                    <div style="display:flex;gap:12px;margin-top:16px;">
+                        <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                        <button type="button" class="btn btn-success" style="flex:1;" onclick="window.App.executeWhatsAppShare('${cleanNum}')"><i class="fab fa-whatsapp"></i> Send via WhatsApp</button>
+                    </div>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            executeWhatsAppShare(mobileNum) {
+                const msg = document.getElementById('waCustomMessage').value;
+                const fileInput = document.getElementById('waImageFile');
+                
+                if (fileInput.files && fileInput.files[0]) {
+                    NotificationEngine.show("File/Image attached! Opening WhatsApp...", "success");
+                }
+
+                const waUrl = `https://wa.me/91${mobileNum}?text=${encodeURIComponent(msg)}`;
+                window.open(waUrl, '_blank');
+                this.closeModal();
+            },
+
+            openQuotationModal() {
+                this.openQuotationForLead('', '', 'Avani Nagar 1');
+            },
+
+            openQuotationForLead(cName, cMobile, cProject) {
+                SoundFX.playClick();
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-file-invoice-dollar" style="color:var(--accent);"></i> True Nova Plot Quotation</h3>
+                    <form onsubmit="window.App.showQuotationPreviewSheet(event)">
+                        <div class="form-group"><label>Customer Name</label><input type="text" id="q_name" value="${cName}" required placeholder="e.g. POOJA AWASARMOL" /></div>
+                        <div class="form-group"><label>Advisor Mobile No.</label><input type="tel" id="q_mobile" value="${cMobile || '7709966140'}" required placeholder="7709966140" /></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Project Name</label><input type="text" id="q_project" value="${cProject || 'Avani Nagar 1'}" required /></div>
+                            <div class="form-group"><label>Plot Number</label><input type="text" id="q_plot_no" value="Plot No-11" required /></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Plot Area (Sq. Ft.)</label><input type="number" id="q_size" value="1312" required oninput="window.App.calcQuotationMath()" /></div>
+                            <div class="form-group"><label>Rate Per Sq. Ft. (₹)</label><input type="number" id="q_rate" value="1400" required oninput="window.App.calcQuotationMath()" /></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Loan %</label><input type="number" id="q_loan_pct" value="80" oninput="window.App.calcQuotationMath()" /></div>
+                            <div class="form-group"><label>Advocate / Legal Fee (₹)</label><input type="number" id="q_adv_fee" value="12000" oninput="window.App.calcQuotationMath()" /></div>
+                        </div>
+                        <div class="form-group"><label>Quotation Validity</label><select id="q_validity"><option value="7 Days">Valid for 7 Days</option><option value="15 Days">Valid for 15 Days</option><option value="30 Days">Valid for 30 Days</option></select></div>
+                        <div class="schedule-box-dashed" style="background:#ECFDF5;border-color:#A7F3D0;">
+                            <div style="font-size:0.85rem;font-weight:800;color:#059669;margin-bottom:4px;">Calculated Total Cost (7% Stamp Duty):</div>
+                            <div style="font-size:1.4rem;font-weight:900;color:#047857;" id="q_total_display">₹0.00</div>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:10px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;"><i class="fas fa-eye"></i> View Premium Preview</button>
+                        </div>
+                    </form>
+                `;
+                this.calcQuotationMath();
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            calcQuotationMath() {
+                const size = parseFloat(document.getElementById('q_size').value) || 0;
+                const rate = parseFloat(document.getElementById('q_rate').value) || 0;
+                const advFee = parseFloat(document.getElementById('q_adv_fee').value) || 0;
+                const basicCost = size * rate;
+                const stampDuty = (basicCost * 0.07);
+                const totalCost = basicCost + stampDuty + advFee;
+                const disp = document.getElementById('q_total_display');
+                if (disp) disp.textContent = '₹' + totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            },
+
+            showQuotationPreviewSheet(e) {
+                e.preventDefault();
+                SoundFX.playSuccess();
+
+                const name = document.getElementById('q_name').value.trim();
+                const mobile = document.getElementById('q_mobile').value.trim();
+                const project = document.getElementById('q_project').value.trim();
+                const plotNo = document.getElementById('q_plot_no').value.trim();
+                const size = parseFloat(document.getElementById('q_size').value) || 0;
+                const rate = parseFloat(document.getElementById('q_rate').value) || 0;
+                const loanPct = parseFloat(document.getElementById('q_loan_pct').value) || 0;
+                const advFee = parseFloat(document.getElementById('q_adv_fee').value) || 0;
+                const validity = document.getElementById('q_validity').value;
+
+                const basicCost = size * rate;
+                const loanAmt = (basicCost * loanPct) / 100;
+                const downPay = basicCost - loanAmt;
+                const stampDuty = (basicCost * 0.07);
+                const totalCost = basicCost + stampDuty + advFee;
+                const today = new Date().toLocaleDateString('en-IN');
+
+                document.getElementById('modalContent').innerHTML = `
+                    <div class="tn-quotation-preview" id="printableQuotationCard">
+                        <div class="tn-header">
+                            <div class="tn-brand-box">
+                                <img src="1000573949-removebg-preview.png" alt="Logo" class="tn-logo-img" />
+                                <div>
+                                    <div class="tn-brand">TRUE NOVA REALTY</div>
+                                    <div class="tn-tagline">BUILDING TRUST • CREATING VALUE</div>
+                                </div>
+                            </div>
+                            <div class="tn-invoice-meta">
+                                <div class="tn-invoice-title">Official Plot Quotation</div>
+                                <div class="tn-invoice-date">Date: ${today}</div>
+                            </div>
+                        </div>
+                        <div class="tn-grid">
+                            <div class="tn-row"><span>Customer Name</span>${name}</div>
+                            <div class="tn-row"><span>Advisor Mobile</span>${mobile}</div>
+                            <div class="tn-row"><span>Project Name</span>${project}</div>
+                            <div class="tn-row"><span>Plot Number</span>${plotNo}</div>
+                        </div>
+                        <table class="tn-table">
+                            <thead><tr><th>Description</th><th>Amount (₹)</th></tr></thead>
+                            <tbody>
+                                <tr><td>Plot Area: ${size.toLocaleString()} Sq. Ft. @ ₹${rate}/Sq. Ft.</td><td>₹${basicCost.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+                                <tr><td>Bank Loan Assistance (${loanPct}%)</td><td>₹${loanAmt.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+                                <tr><td>Down Payment (Self Payable)</td><td>₹${downPay.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+                                <tr><td>Stamp Duty Charge (7% Govt Fee)</td><td>₹${stampDuty.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+                                <tr><td>Advocate / Legal Documentation Fee</td><td>₹${advFee.toLocaleString('en-IN')}</td></tr>
+                                <tr class="total-row"><td>GRAND TOTAL COST</td><td>₹${totalCost.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="tn-validity-note"><i class="fas fa-clock"></i> Note: This quotation is ${validity} from date of issuance.</div>
+                        <div class="tn-footer-sign">
+                            <div>Prepared By: True Nova Sales Team</div>
+                            <div>Authorized Signature</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:16px;">
+                        <button class="btn btn-outline" style="flex:1;" onclick="window.App.downloadQuotationAsPDF()"><i class="fas fa-download"></i> Automatic Download PDF</button>
+                        <button class="btn btn-share" style="flex:1;" onclick="window.App.triggerUniversalShare('${name}','${plotNo}','${project}',${size},${rate},${totalCost},'${validity}')"><i class="fas fa-share-alt"></i> Share</button>
+                        <button class="btn btn-warning" style="flex:0.5;" onclick="window.App.closeModal()">Cancel</button>
+                    </div>
+                `;
+            },
+
+            // jsPDF Automatic Download Function
+            downloadQuotationAsPDF() {
+                SoundFX.playSuccess();
+                window.jsPDF = window.jspdf.jsPDF;
+                const element = document.getElementById('printableQuotationCard');
+
+                html2canvas(element, { scale: 2, useCORS: true }).then((canvas) => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgWidth = 210; 
+                    const pageHeight = 295; 
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 0;
+
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+
+                    pdf.save('TrueNova_Quotation.pdf');
+                    NotificationEngine.show("Quotation PDF Downloaded Successfully!", "success");
+                });
+            },
+
+            openPrintableWindow() {
+                SoundFX.playSuccess();
+                const cardHtml = document.getElementById('printableQuotationCard').outerHTML;
+                const newWindow = window.open('', '_blank');
+                if (newWindow) {
+                    newWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>True Nova Realty - Official Quotation</title>
+                            <style>
+                                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #0F2942; background: #fff; }
+                                .tn-quotation-preview { background: #FFFFFF; color: #0F2942; border-radius: 16px; padding: 28px; border: 3px solid #0F2942; max-width: 650px; margin: 0 auto; box-shadow: 0 15px 35px rgba(15,41,66,0.15); }
+                                .tn-header { border-bottom: 3px solid #D4AF37; padding-bottom: 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+                                .tn-brand-box { display: flex; align-items: center; gap: 12px; }
+                                .tn-logo-img { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; background: #fff; padding: 2px; border: 1.5px solid #D4AF37; }
+                                .tn-brand { font-size: 1.5rem; font-weight: 900; color: #0F2942; line-height: 1.1; }
+                                .tn-tagline { font-size: 0.72rem; color: #D4AF37; font-weight: 800; letter-spacing: 0.8px; }
+                                .tn-invoice-meta { text-align: right; }
+                                .tn-invoice-title { font-size: 0.95rem; font-weight: 900; color: #0F2942; text-transform: uppercase; }
+                                .tn-invoice-date { font-size: 0.78rem; color: #64748B; font-weight: 700; }
+                                .tn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #F8FAFC; padding: 14px; border-radius: 10px; border: 1.5px solid #E2E8F0; margin-bottom: 20px; }
+                                .tn-row { font-size: 0.85rem; font-weight: 800; color: #0F2942; }
+                                .tn-row span { color: #64748B; font-weight: 600; display: block; font-size: 0.72rem; text-transform: uppercase; }
+                                .tn-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.88rem; }
+                                .tn-table th { background: #0F2942; color: #FFFFFF; text-align: left; padding: 10px 14px; font-weight: 800; }
+                                .tn-table th:last-child, .tn-table td:last-child { text-align: right; }
+                                .tn-table td { border-bottom: 1px solid #E2E8F0; padding: 10px 14px; font-weight: 700; color: #334155; }
+                                .tn-table tr.total-row td { background: #ECFDF5; color: #047857; font-weight: 900; font-size: 1.05rem; border-top: 2px solid #10B981; border-bottom: 2px solid #10B981; }
+                                .tn-validity-note { background: #FFFBEB; border: 1.5px dashed #F59E0B; padding: 10px 14px; border-radius: 8px; font-size: 0.78rem; color: #B45309; font-weight: 800; margin-bottom: 20px; text-align: center; }
+                                .tn-footer-sign { display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748B; font-weight: 700; border-top: 2px solid #CBD5E1; padding-top: 12px; }
+                            </style>
+                        </head>
+                        <body>
+                            ${cardHtml}
+                            <div style="text-align:center; margin-top: 30px;">
+                                <button onclick="window.print()" style="background:#0F2942; color:#fff; padding:12px 28px; border:none; border-radius:8px; font-size:1rem; font-weight:bold; cursor:pointer;">Print / Save as PDF</button>
+                            </div>
+                            <script>window.onload = function() { setTimeout(() => { window.print(); }, 500); }<\/script>
+                        </body>
+                        </html>
+                    `);
+                    newWindow.document.close();
+                } else {
+                    window.print();
+                }
+            },
+
+            triggerUniversalShare(name, plotNo, project, size, rate, totalCost, validity) {
+                SoundFX.playSuccess();
+                const shareText = `TRUE NOVA REALTY - OFFICIAL QUOTATION\n\nCustomer: ${name}\nProject: ${project} (${plotNo})\nPlot Area: ${size.toLocaleString()} Sq. Ft. @ ₹${rate}/Sq. Ft.\nGRAND TOTAL COST: ₹${totalCost.toLocaleString('en-IN', {minimumFractionDigits:2})}\nValidity: ${validity}\n\nThank you!`;
+                if (navigator.share) {
+                    navigator.share({ title: 'True Nova Plot Quotation', text: shareText }).catch(() => {});
+                } else {
+                    navigator.clipboard.writeText(shareText);
+                    alert("Quotation summary copied to clipboard! You can paste and share it anywhere.");
+                }
+            },
+
+            openCallLogModal(id, name, mobile) {
+                SoundFX.playClick();
+                window.location.href = 'tel:' + mobile;
+                const today = new Date().toISOString().slice(0, 10);
+                const lead = this.allCloudLeads.find(l => l.id === id);
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-phone-volume"></i> Log Call Details</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:14px;">Log call outcome for <strong>${name}</strong> (${mobile})</p>
+                    <form onsubmit="window.App.saveCallRemarkAndSchedule(event, '${id}')">
+                        <div class="form-group"><label>What did the customer say? (Call Note)</label><textarea id="callRemarkInput" required placeholder="e.g. Tomorrow call karna hai visit ke liye..." style="height:80px;"></textarea></div>
+                        <div class="form-group"><label>Update Status</label><select id="callStatusInput"><option value="Follow-up">Follow-up</option><option value="Site Visit">Site Visit</option><option value="Contacted">Contacted</option><option value="Booked">Booked</option><option value="Not Interested">Not Interested</option></select></div>
+                        <div class="schedule-box-dashed"><div style="font-size:0.85rem;font-weight:700;color:#D97706;margin-bottom:8px;"><i class="fas fa-calendar-alt"></i> Set Next Follow-up Schedule</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Next Date</label><input type="date" id="callNextDateInput" value="${lead ? (lead.nextFollowupDate || today) : today}" required /></div><div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Next Time</label><input type="time" id="callNextTimeInput" value="${lead ? (lead.nextFollowupTime || '09:00') : '09:00'}" /></div></div></div>
+                        <div style="display:flex;gap:12px;margin-top:16px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;">Save Call Note & History</button>
+                        </div>
+                    </form>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            saveCallRemarkAndSchedule(e, id) {
+                e.preventDefault();
+                const remark = document.getElementById('callRemarkInput').value.trim();
+                const newStatus = document.getElementById('callStatusInput').value;
+                const nextDate = document.getElementById('callNextDateInput').value;
+                const nextTime = document.getElementById('callNextTimeInput').value || '09:00';
+                const now = new Date();
+                const timeStampStr = now.toLocaleDateString('en-IN') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const lead = this.allCloudLeads.find(l => l.id === id);
+                const currentLogs = lead ? (lead.callLogs || []) : [];
+                currentLogs.unshift({ remark, date: timeStampStr, loggedBy: this.currentUser ? this.currentUser.email : 'Admin' });
+                db.collection('leads').doc(id).update({
+                    callLogs: currentLogs,
+                    status: newStatus,
+                    nextFollowupDate: nextDate,
+                    nextFollowupTime: nextTime,
+                    lastCallDate: timeStampStr
+                }).then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Call Note & Next Follow-up Scheduled!", "success");
+                    document.getElementById('modalOverlay').classList.remove('open');
+                });
+            },
+
+            openCallHistoryModal(id) {
+                SoundFX.playClick();
+                const lead = this.allCloudLeads.find(l => l.id === id);
+                if (!lead) return;
+                const logs = lead.callLogs || [];
+                const historyHTML = !logs.length ?
+                    `<p style="text-align:center;padding:20px;color:var(--text-muted);">No call logs recorded yet.</p>` :
+                    logs.map(log =>
+                        `<div style="border-left:2px solid var(--accent);padding-left:12px;margin-bottom:12px;"><div style="font-size:0.72rem;color:var(--text-muted);font-weight:700;"><i class="far fa-clock"></i> ${log.date} — ${log.loggedBy}</div><div style="font-size:0.85rem;color:var(--text-main);font-weight:600;background:rgba(148,163,184,0.1);padding:6px 10px;border-radius:6px;margin-top:4px;">${log.remark}</div></div>`
+                    ).join('');
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-history"></i> Call History (${logs.length} Calls)</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Timeline history for <strong>${lead.customerName}</strong></p>
+                    <div style="max-height:300px;overflow-y:auto;margin-bottom:16px;">${historyHTML}</div>
+                    <button class="btn btn-outline" onclick="window.App.closeModal()">Close Timeline</button>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            openEditLeadModal(id) {
+                SoundFX.playClick();
+                const lead = this.allCloudLeads.find(l => l.id === id);
+                if (!lead) return;
+                const today = new Date().toISOString().slice(0, 10);
+                const projOptions = this.projectsList.length > 0 ?
+                    this.projectsList.map(p => `<option value="${p.name}" ${lead.project===p.name?'selected':''}>${p.name}</option>`).join('') :
+                    `<option value="Avani Nagar 1">Avani Nagar 1</option>`;
+
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-edit"></i> Edit Lead</h3>
+                    <form onsubmit="window.App.updateLead(event, '${id}')">
+                        <div class="form-group"><label>Customer Name</label><input type="text" id="ecn" value="${lead.customerName}" required /></div>
+                        <div class="form-group"><label>Mobile Number</label><input type="tel" id="emb" value="${lead.mobile}" required pattern="[0-9]{10}" /></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label>Project</label><select id="epj">${projOptions}</select></div>
+                            <div class="form-group"><label>Priority</label><select id="e_priority"><option value="High" ${lead.priority==='High'?'selected':''}>High 🔴</option><option value="Medium" ${!lead.priority || lead.priority==='Medium'?'selected':''}>Medium 🟡</option><option value="Low" ${lead.priority==='Low'?'selected':''}>Low 🟢</option></select></div>
+                        </div>
+                        <div class="form-group"><label>Status</label><select id="est"><option value="New" ${lead.status==='New'?'selected':''}>New</option><option value="Follow-up" ${lead.status==='Follow-up'?'selected':''}>Follow-up</option><option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option><option value="Site Visit" ${lead.status==='Site Visit'?'selected':''}>Site Visit</option><option value="Booked" ${lead.status==='Booked'?'selected':''}>Booked</option><option value="Not Interested" ${lead.status==='Not Interested'?'selected':''}>Not Interested</option></select></div>
+                        
+                        <div class="form-group"><label>Customer Notes / Remarks</label><textarea id="e_notes" placeholder="Customer kya bola..." style="height:75px;">${lead.notes || ''}</textarea></div>
+                        <div class="schedule-box-dashed">
+                            <div style="font-size:0.85rem;font-weight:700;color:#D97706;margin-bottom:8px;"><i class="fas fa-calendar-alt"></i> Schedule Follow-up</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                                <div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Date</label><input type="date" id="e_sfd" value="${lead.nextFollowupDate || today}" /></div>
+                                <div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Time</label><input type="time" id="e_sft" value="${lead.nextFollowupTime || '09:00'}" /></div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:12px;margin-top:16px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;">Update Lead</button>
+                        </div>
+                    </form>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            updateLead(e, id) {
+                e.preventDefault();
+                const notes = document.getElementById('e_notes').value.trim();
+                const sfd = document.getElementById('e_sfd').value;
+                const sft = document.getElementById('e_sft').value || '09:00';
+                const newStatus = document.getElementById('est').value;
+                const priority = document.getElementById('e_priority').value;
+
+                const now = new Date();
+                const timeStampStr = now.toLocaleDateString('en-IN') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const lead = this.allCloudLeads.find(l => l.id === id);
+                const currentLogs = lead ? (lead.callLogs || []) : [];
+
+                if (notes && notes !== (lead.notes || '')) {
+                    currentLogs.unshift({ remark: `Edit/Note: ${notes}`, date: timeStampStr, loggedBy: this.currentUser ? this.currentUser.email : 'Admin' });
+                }
+
+                db.collection('leads').doc(id).update({
+                    customerName: document.getElementById('ecn').value.trim(),
+                    mobile: document.getElementById('emb').value.trim(),
+                    project: document.getElementById('epj').value,
+                    status: newStatus,
+                    priority: priority,
+                    notes: notes,
+                    nextFollowupDate: sfd,
+                    nextFollowupTime: sft,
+                    callLogs: currentLogs
+                }).then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Lead updated successfully!", "success");
+                    document.getElementById('modalOverlay').classList.remove('open');
+                });
+            },
+
+            deleteLead(id) {
+                if (!confirm('Are you sure you want to delete this lead?')) return;
+                db.collection('leads').doc(id).delete().then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Lead deleted successfully!", "warning");
+                });
+            },
+
+            openAddLead() {
+                SoundFX.playClick();
+                const today = new Date().toISOString().slice(0, 10);
+                const projOptions = this.projectsList.length > 0 ?
+                    this.projectsList.map(p => `<option value="${p.name}">${p.name}</option>`).join('') :
+                    `<option value="Avani Nagar 1">Avani Nagar 1</option>`;
+                document.getElementById('modalContent').innerHTML = `
+                    <div style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin-bottom:18px;display:flex;align-items:center;gap:10px;"><i class="fas fa-user-plus" style="color:var(--primary);"></i> Add New Lead</div>
+                    <form onsubmit="window.App.checkAndSaveLead(event)">
+                        <div class="form-group"><label>Customer Name <span style="color:var(--danger)">*</span></label><input type="text" id="cn" required placeholder="Full Name" /></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div class="form-group"><label>Mobile <span style="color:var(--danger)">*</span></label><input type="tel" id="mb" required pattern="[0-9]{10}" placeholder="10-digit number" /></div>
+                            <div class="form-group"><label>WhatsApp</label><input type="tel" id="wa_num" pattern="[0-9]{10}" placeholder="Optional" /></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div class="form-group"><label>Project</label><select id="pj">${projOptions}</select></div>
+                            <div class="form-group"><label>Priority</label><select id="add_priority"><option value="High">High 🔴</option><option value="Medium" selected>Medium 🟡</option><option value="Low">Low 🟢</option></select></div>
+                        </div>
+                        <div class="form-group"><label>Status</label><select id="st"><option value="New">New</option><option value="Follow-up">Follow-up</option><option value="Contacted">Contacted</option><option value="Site Visit">Site Visit</option><option value="Booked">Booked</option><option value="Not Interested">Not Interested</option></select></div>
+                        <div class="schedule-box-dashed"><label style="display:flex;align-items:center;gap:10px;font-weight:800;color:#D97706;cursor:pointer;"><input type="checkbox" id="toggleScheduleCheck" onchange="window.App.toggleScheduleInputs(this)" style="width:18px;height:18px;" /><span><i class="fas fa-calendar-alt"></i> Schedule Follow-up Now?</span></label><div id="scheduleInputsArea" style="display:none;margin-top:12px;grid-template-columns:1fr 1fr;gap:10px;"><div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Date</label><input type="date" id="fd" value="${today}" /></div><div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Time</label><input type="time" id="ft" value="09:00" /></div></div></div>
+                        <div class="form-group"><label>Notes</label><textarea id="notes" placeholder="Notes..." style="height:70px;"></textarea></div>
+                        <div id="duplicateCheckArea"></div>
+                        <div style="display:flex;gap:12px;margin-top:10px;">
+                            <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="flex:1;" id="saveLeadBtn">Save Lead</button>
+                        </div>
+                    </form>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            toggleScheduleInputs(chk) {
+                const area = document.getElementById('scheduleInputsArea');
+                if (area) area.style.display = chk.checked ? 'grid' : 'none';
+            },
+
+            checkAndSaveLead(e) {
+                e.preventDefault();
+                const name = document.getElementById('cn').value.trim();
+                const mobile = document.getElementById('mb').value.trim();
+                const whatsapp = document.getElementById('wa_num').value.trim();
+                const project = document.getElementById('pj').value;
+                const status = document.getElementById('st').value;
+                const priority = document.getElementById('add_priority').value;
+                const notes = document.getElementById('notes').value.trim();
+                const isSched = document.getElementById('toggleScheduleCheck').checked;
+                const fDate = isSched ? document.getElementById('fd').value : new Date().toISOString().slice(0, 10);
+                const fTime = isSched ? document.getElementById('ft').value : '09:00';
+
+                const existingLead = this.allCloudLeads.find(l => l.mobile === mobile);
+                if (existingLead) {
+                    SoundFX.playClick();
+                    const createdByExec = existingLead.createdBy || 'Unknown Executive';
+                    const callCount = (existingLead.callLogs || []).length;
+                    const isMyOwnLead = (existingLead.createdBy === (this.currentUser ? this.currentUser.email : ''));
+                    if (isMyOwnLead) {
+                        alert("Yeh customer aapke paas pehle se hi added hai!");
+                        return;
+                    }
+                    const alertContainer = document.getElementById('duplicateCheckArea');
+                    alertContainer.innerHTML = `
+                        <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:12px;padding:14px;margin-top:10px;">
+                            <h4 style="color:#DC2626;font-size:0.95rem;font-weight:800;"><i class="fas fa-exclamation-triangle"></i> REPEATED CUSTOMER ALERT</h4>
+                            <p style="font-size:0.83rem;color:#991B1B;margin-top:4px;">Customer <strong>"${existingLead.customerName}"</strong> (${mobile}) pehle se CRM me <strong>${createdByExec}</strong> ke dwara added hai.</p>
+                            ${callCount === 0 || existingLead.status === 'Not Interested' ? `<button type="button" class="btn btn-warning" style="margin-top:8px;" onclick="window.App.claimLeadOwnership('${existingLead.id}')"><i class="fas fa-hand-holding"></i> Claim / Transfer Lead To Me</button>` : `<p style="font-size:0.75rem;font-weight:700;color:#DC2626;margin-top:6px;">⚠️ Executive is customer ko actively follow kar raha hai. Aap yeh number add nahi kar sakte.</p>`}
+                        </div>
+                    `;
+                    document.getElementById('saveLeadBtn').style.display = 'none';
+                    return;
+                }
+
+                db.collection('leads').add({
+                    customerName: name, mobile: mobile, whatsapp: whatsapp, project: project,
+                    status: status, priority: priority, nextFollowupDate: fDate, nextFollowupTime: fTime,
+                    notes: notes, callLogs: [],
+                    createdBy: this.currentUser ? this.currentUser.email : 'Admin',
+                    createdAt: new Date().toISOString()
+                }).then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Lead saved successfully!", "success");
+                    document.getElementById('modalOverlay').classList.remove('open');
+                });
+            },
+
+            claimLeadOwnership(leadId) {
+                if (!confirm("Kya aap is lead ki ownership apne naam par transfer karna chahte hain?")) return;
+                db.collection('leads').doc(leadId).update({
+                    createdBy: this.currentUser ? this.currentUser.email : 'Admin',
+                    transferredAt: new Date().toISOString()
+                }).then(() => {
+                    SoundFX.playSuccess();
+                    NotificationEngine.show("Lead successfully transferred to you!", "success");
+                    document.getElementById('modalOverlay').classList.remove('open');
+                });
+            },
+
+            switchFuTab(tabType) {
+                SoundFX.playClick();
+                this.activeFuTab = tabType;
+                document.querySelectorAll('.fu-tab').forEach(t => t.classList.remove('active'));
+                if (tabType === 'today') document.getElementById('fuTabToday').classList.add('active');
+                if (tabType === 'overdue') document.getElementById('fuTabOverdue').classList.add('active');
+                if (tabType === 'upcoming') document.getElementById('fuTabUpcoming').classList.add('active');
+                this.renderTasks();
+            },
+
+            syncEmailData() {
+                SoundFX.playSuccess();
+                NotificationEngine.show("Data synced with " + (this.currentUser ? this.currentUser.email : "Cloud Email"), "success");
+            },
+
+            exportBackupCode() {
+                SoundFX.playClick();
+                const jsonStr = JSON.stringify(this.leads, null, 2);
+                navigator.clipboard.writeText(jsonStr);
+                alert("Backup JSON Code copied to clipboard!");
+            },
+
+            importBackupCodeModal() {
+                SoundFX.playClick();
+                document.getElementById('modalContent').innerHTML = `
+                    <h3><i class="fas fa-upload"></i> Import Backup Code</h3>
+                    <div class="form-group"><label>Paste JSON Code</label><textarea id="importJsonInput" style="height:120px;" placeholder="Paste JSON backup code here..."></textarea></div>
+                    <div style="display:flex;gap:12px;">
+                        <button type="button" class="btn btn-outline" style="flex:1;" onclick="window.App.closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" style="flex:1;" onclick="window.App.processImportBackup()">Restore Data</button>
+                    </div>
+                `;
+                document.getElementById('modalOverlay').classList.add('open');
+            },
+
+            processImportBackup() {
+                try {
+                    const str = document.getElementById('importJsonInput').value.trim();
+                    const data = JSON.parse(str);
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            db.collection('leads').add({ ...item, createdBy: this.currentUser ? this.currentUser.email : 'Admin' });
+                        });
+                        SoundFX.playSuccess();
+                        NotificationEngine.show("Backup restored successfully!", "success");
+                        this.closeModal();
+                    }
+                } catch (e) { alert("Invalid JSON Code!"); }
+            },
+
+            showAbout() {
+                alert("True Nova Realty Mini CRM v1.0\nCloud Sync & Multi-User Isolated System.");
+            },
+
+            toggleTheme() {
+                SoundFX.playClick();
+                this.isDarkMode = !this.isDarkMode;
+                document.body.classList.toggle('dark-mode', this.isDarkMode);
+                document.getElementById('themeIcon').className = this.isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
+            },
+
+            navigateTo(page) {
+                SoundFX.playClick();
+                this.currentPage = page;
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                const targetPage = document.getElementById('page-' + page);
+                if (targetPage) targetPage.classList.add('active');
+                document.querySelectorAll('.bottom-nav .nav-item').forEach(n => n.classList.remove('active'));
+                const navMap = { dashboard: 0, leads: 1, tasks: 2, bookings: 3, more: 4 };
+                const activeNav = document.querySelectorAll('.bottom-nav .nav-item')[navMap[page] ?? 0];
+                if (activeNav) activeNav.classList.add('active');
+                this.renderCurrentPage();
+                this.closeModal();
+            },
+
+            closeModal() {
+                document.getElementById('modalOverlay').classList.remove('open');
+            }
+        };
+
+        window.App = App;
+        App.init();
+    </script>
+</body>
+</html>
